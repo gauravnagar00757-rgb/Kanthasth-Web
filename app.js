@@ -165,7 +165,7 @@ function currentTarget() {
 function mentorLines() {
   const target = currentTarget();
   const done = SKILL_TREE_DATA.filter(n => n.state === 'completed').length;
-  if (hearts <= 0) return ['No hearts left. Revise your notes. Come back sharper.'];
+  if (hearts <= 0) return [`No hearts left. Next heart in ${refillMinutes()} min. Revise your notes. Come back sharper.`];
   if (!target) return ['All modules cleared. Now revise. Mocks are the next battlefield.'];
   return [
     `Target: Clear the \u2018${target.title}\u2019 node today. Do not break the streak.`,
@@ -324,8 +324,9 @@ function renderQuestion() {
 }
 
 function openArena(node, opener) {
+  checkHeartRefill();
   if (hearts <= 0) {
-    alertMentor('No hearts left. Revise your notes and come back sharper. Weakness does not get a second attempt today.');
+    alertMentor(`No hearts left. Next heart in ${refillMinutes()} min. Revise your notes until then.`);
     return;
   }
   const mod = MODULE_DATA[node.id];
@@ -362,6 +363,7 @@ function unlockChildren() {
 function completeNode(node) {
   node.state = 'completed';
   unlockChildren();
+  saveProgress();
   closeArena();
   renderTree();
   lineIndex = 0;
@@ -378,6 +380,7 @@ function handleCorrect(btn) {
 
   xp += XP_PER_CORRECT;
   streak += 1;
+  saveProgress();
   renderHUD();
   say(`Correct. +${XP_PER_CORRECT} XP. Streak: ${streak}. Do not get comfortable.`);
 
@@ -399,6 +402,8 @@ function handleWrong(btn, q) {
 
   hearts = Math.max(0, hearts - 1);
   streak = 0;
+  if (hearts === 0) heartsEmptyAt = Date.now();
+  saveProgress();
   renderHUD();
   shakeArena();
 
@@ -435,6 +440,100 @@ voiceBtn.addEventListener('click', () => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && arena) closeArena();
 });
+
+/* ------------------------------------------------------------------
+   SAVE GAME (localStorage)
+------------------------------------------------------------------- */
+const SAVE_KEY = 'kanthasth.save.polity';
+const SAVE_VERSION = 1;
+const HEART_REFILL_MS = 30 * 60 * 1000; // hearts come back this long after the last one is lost
+let heartsEmptyAt = null;
+let warnedStorage = false;
+
+function intIn(v, min, max, fallback) {
+  return Number.isInteger(v) && v >= min && v <= max ? v : fallback;
+}
+
+// Returns the parsed save, or null for first-time users, old versions, or unreadable data
+function readSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== 'object' || s.v !== SAVE_VERSION) return null;
+    return s;
+  } catch (err) {
+    console.warn('[Kanthasth] Save unreadable, starting fresh:', err);
+    try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* storage unavailable */ }
+    return null;
+  }
+}
+
+function saveProgress() {
+  if (SKILL_TREE_DATA.length === 0) return; // never overwrite a save before the tree has loaded
+  const nodes = {};
+  SKILL_TREE_DATA.forEach(n => { nodes[n.id] = n.state; });
+  const payload = { v: SAVE_VERSION, hearts, streak, xp, heartsEmptyAt, nodes, savedAt: Date.now() };
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  } catch (err) { // private mode, storage disabled, or quota full: the game keeps running
+    if (!warnedStorage) {
+      warnedStorage = true;
+      console.warn('[Kanthasth] Progress could not be saved:', err);
+    }
+  }
+}
+
+function applySavedStats(s) {
+  hearts = intIn(s.hearts, 0, MAX_HEARTS, MAX_HEARTS);
+  streak = intIn(s.streak, 0, 1000000, 0);
+  xp = intIn(s.xp, 0, 1000000000, 0);
+  heartsEmptyAt = Number.isFinite(s.heartsEmptyAt) ? s.heartsEmptyAt : null;
+}
+
+// Call after the JSON data is applied: overlays the saved stats and node states on the defaults
+function loadProgress() {
+  const s = readSave();
+  if (!s) return false; // first-time user: JSON defaults stay as they are
+  applySavedStats(s);
+  if (s.nodes && typeof s.nodes === 'object') {
+    SKILL_TREE_DATA.forEach(n => {
+      const saved = s.nodes[n.id];
+      if (STATES.includes(saved)) n.state = saved;
+    });
+  }
+  unlockChildren(); // picks up nodes added to the JSON since the save was written
+  checkHeartRefill();
+  return true;
+}
+
+function refillMinutes() {
+  if (heartsEmptyAt === null) return Math.ceil(HEART_REFILL_MS / 60000);
+  return Math.max(1, Math.ceil((heartsEmptyAt + HEART_REFILL_MS - Date.now()) / 60000));
+}
+
+// Out of hearts is no longer permanent now that progress survives a refresh
+function checkHeartRefill() {
+  if (hearts > 0) return false;
+  const now = Date.now();
+  if (heartsEmptyAt === null || heartsEmptyAt > now) {
+    heartsEmptyAt = now; // timer missing or clock went backwards: restart it
+    saveProgress();
+    return false;
+  }
+  if (now - heartsEmptyAt < HEART_REFILL_MS) return false;
+  hearts = MAX_HEARTS;
+  heartsEmptyAt = null;
+  saveProgress();
+  renderHUD();
+  return true;
+}
+
+// Console helper: resetProgress() wipes the save and reloads
+function resetProgress() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* storage unavailable */ }
+  location.reload();
+}
 
 /* ------------------------------------------------------------------
    DATA LOADING (data/polity.json)
@@ -503,6 +602,7 @@ function applyPolityData(d) {
   hearts = MAX_HEARTS;
   streak = 0;
   xp = 0;
+  heartsEmptyAt = null;
 
   SKILL_TREE_DATA = d.nodes.map(n => Object.assign({}, n, { parents: n.parents || [] }));
   NODE_BY_ID = new Map(SKILL_TREE_DATA.map(n => [n.id, n]));
@@ -522,6 +622,8 @@ async function loadPolity() {
     const data = await res.json();
     validatePolityData(data);
     applyPolityData(data);
+    const restored = loadProgress();
+    console.log('[Kanthasth] ' + (restored ? 'Save game restored.' : 'No save found, starting fresh.'));
 
     statusEl.remove();
     renderHUD();
@@ -543,6 +645,8 @@ async function loadPolity() {
    INIT
 ------------------------------------------------------------------- */
 function init() {
+  const saved = readSave();
+  if (saved) applySavedStats(saved);
   renderHUD();
   syncBottomPadding();
   loadPolity();
