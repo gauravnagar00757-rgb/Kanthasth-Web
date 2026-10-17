@@ -399,3 +399,19 @@ body.arena-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Loading / error state ---------- */
+.tree__status { padding: 64px 24px; text-align: center; color: var(--muted); font-weight: 600; }
+.tree__status p { margin: 0 0 18px; line-height: 1.5; animation: status-pulse 1.4s ease-in-out infinite; }
+.tree__status.is-error { color: var(--text); }
+.tree__status.is-error p { animation: none; }
+.tree__status button {
+  padding: 10px 24px;
+  border-radius: 99px;
+  border: 1.5px solid var(--cyan);
+  background: transparent;
+  color: var(--cyan);
+  font-weight: 800;
+  cursor: pointer;
+}
+@keyframes status-pulse { 50% { opacity: 0.45; } }

@@ -1,60 +1,26 @@
 'use strict';
 
 /* ------------------------------------------------------------------
-   DATA
-   x = horizontal position in % of tree width, y = row index (0 = top)
-   parents = ids that must be completed before this node unlocks
+   DATA (filled at runtime from data/polity.json)
+   node: { id, title, state, x (% of width), y (row), parents[], deck }
 ------------------------------------------------------------------- */
-const SKILL_TREE_DATA = [
-  { id: 'polity_basics',      title: 'Polity Basics',        state: 'completed', x: 50, y: 0, parents: [],                              deck: 'polity_mod1' },
-  { id: 'preamble',           title: 'Preamble',             state: 'completed', x: 75, y: 1, parents: ['polity_basics'],               deck: 'polity_mod2' },
-  { id: 'fundamental_rights', title: 'Fundamental Rights',   state: 'unlocked',  x: 25, y: 1, parents: ['polity_basics'],               deck: 'polity_mod3' },
-  { id: 'dpsp',               title: 'DPSP',                 state: 'locked',    x: 25, y: 2, parents: ['fundamental_rights'],          deck: 'polity_mod4' },
-  { id: 'union_executive',    title: 'Union Executive',      state: 'unlocked',  x: 75, y: 2, parents: ['preamble'],                    deck: 'polity_mod5' },
-  { id: 'parliament',         title: 'Parliament',           state: 'locked',    x: 50, y: 3, parents: ['dpsp', 'union_executive'],     deck: 'polity_mod6' },
-  { id: 'judiciary',          title: 'Judiciary',            state: 'locked',    x: 25, y: 4, parents: ['parliament'],                  deck: 'polity_mod7' },
-  { id: 'federalism',         title: 'Federal Structure',    state: 'locked',    x: 75, y: 4, parents: ['parliament'],                  deck: 'polity_mod8' },
-  { id: 'polity_boss',        title: 'Polity Boss Test',     state: 'locked',    x: 50, y: 5, parents: ['judiciary', 'federalism'],     deck: 'polity_boss' }
-];
+let SKILL_TREE_DATA = [];
 
 /* ------------------------------------------------------------------
    GLOBAL GAME STATE
 ------------------------------------------------------------------- */
-const MAX_HEARTS = 5;
-const XP_PER_CORRECT = 50;
-const QUESTIONS_PER_RUN = 1; // questions asked before a node completes; raise it when modules have more content
+let MAX_HEARTS = 5;
+let XP_PER_CORRECT = 50;
+let QUESTIONS_PER_RUN = 1; // questions asked before a node completes; raise it when modules have more content
 let hearts = 5;
 let streak = 0;
 let xp = 0;
 
 /* ------------------------------------------------------------------
-   MODULE DATA (keyed by node id)
-   correctAnswer must match one of the options exactly
+   MODULE DATA (filled at runtime, keyed by node id)
+   { [nodeId]: { questions: [{ question, options[4], correctAnswer, mentorScolding }] } }
 ------------------------------------------------------------------- */
-const MODULE_DATA = {
-  fundamental_rights: {
-    questions: [
-      {
-        question: 'Which Article of the Constitution of India guarantees the Right to Life and Personal Liberty?',
-        options: ['Article 19', 'Article 20', 'Article 21', 'Article 22'],
-        correctAnswer: 'Article 21',
-        mentorScolding: 'Focus! Article 21 is life and liberty. You just lost a heart and your streak. Try again!'
-      },
-      {
-        question: 'The Right to Education was made a Fundamental Right (Article 21A) by which Constitutional Amendment?',
-        options: ['42nd Amendment', '44th Amendment', '86th Amendment', '93rd Amendment'],
-        correctAnswer: '86th Amendment',
-        mentorScolding: 'Sloppy. The 86th Amendment gave us Article 21A. Dates and numbers win this exam. You lost a heart. Recover.'
-      },
-      {
-        question: 'Who described Article 32, the Right to Constitutional Remedies, as the heart and soul of the Constitution?',
-        options: ['Jawaharlal Nehru', 'Dr. B. R. Ambedkar', 'Rajendra Prasad', 'Sardar Patel'],
-        correctAnswer: 'Dr. B. R. Ambedkar',
-        mentorScolding: 'Unacceptable. Ambedkar called Article 32 the heart and soul. This is a one-mark gift and you dropped it. Streak gone. Rebuild.'
-      }
-    ]
-  }
-};
+let MODULE_DATA = {};
 
 /* ------------------------------------------------------------------
    LAYOUT CONSTANTS (px)
@@ -74,7 +40,7 @@ const ICONS = {
 };
 const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500" fill="none" stroke="currentColor" stroke-width="3.500" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-const NODE_BY_ID = new Map(SKILL_TREE_DATA.map(n => [n.id, n]));
+let NODE_BY_ID = new Map();
 const treeEl = document.getElementById('tree');
 const linksEl = document.getElementById('links');
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -471,9 +437,116 @@ document.addEventListener('keydown', e => {
 });
 
 /* ------------------------------------------------------------------
+   DATA LOADING (data/polity.json)
+------------------------------------------------------------------- */
+const DATA_URL = 'data/polity.json';
+const STATES = ['locked', 'unlocked', 'completed'];
+
+const statusEl = document.createElement('div');
+statusEl.className = 'tree__status';
+statusEl.setAttribute('role', 'status');
+
+function showStatus(message, withRetry) {
+  treeEl.style.height = '';
+  treeEl.querySelectorAll('.node').forEach(el => el.remove());
+  linksEl.replaceChildren();
+
+  statusEl.replaceChildren();
+  statusEl.classList.toggle('is-error', Boolean(withRetry));
+  const p = document.createElement('p');
+  p.textContent = message;
+  statusEl.appendChild(p);
+
+  if (withRetry) {
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', loadPolity);
+    statusEl.appendChild(retry);
+  }
+  if (!statusEl.isConnected) treeEl.appendChild(statusEl);
+}
+
+// Fail loudly on malformed JSON instead of breaking the game halfway through
+function validatePolityData(d) {
+  if (!d || !Array.isArray(d.nodes) || d.nodes.length === 0) throw new Error('polity.json: "nodes" must be a non-empty array');
+  if (!d.modules || typeof d.modules !== 'object') throw new Error('polity.json: "modules" must be an object');
+
+  const ids = new Set();
+  d.nodes.forEach((n, i) => {
+    if (!n.id || !n.title) throw new Error(`nodes[${i}] needs an id and a title`);
+    if (!STATES.includes(n.state)) throw new Error(`nodes[${i}] (${n.id}) has invalid state "${n.state}"`);
+    if (typeof n.x !== 'number' || typeof n.y !== 'number') throw new Error(`nodes[${i}] (${n.id}) needs numeric x and y`);
+    if (ids.has(n.id)) throw new Error(`duplicate node id "${n.id}"`);
+    ids.add(n.id);
+  });
+  d.nodes.forEach(n => (n.parents || []).forEach(pid => {
+    if (!ids.has(pid)) throw new Error(`node "${n.id}" references unknown parent "${pid}"`);
+  }));
+
+  Object.entries(d.modules).forEach(([nodeId, mod]) => {
+    if (!ids.has(nodeId)) throw new Error(`modules."${nodeId}" does not match any node id`);
+    if (!mod || !Array.isArray(mod.questions) || mod.questions.length === 0) throw new Error(`modules."${nodeId}" needs a questions array`);
+    mod.questions.forEach((q, i) => {
+      const ok = q.question && Array.isArray(q.options) && q.options.length === 4 &&
+                 q.options.includes(q.correctAnswer) && q.mentorScolding;
+      if (!ok) throw new Error(`modules."${nodeId}".questions[${i}] is malformed (needs question, 4 options, a correctAnswer from the options, mentorScolding)`);
+    });
+  });
+}
+
+function applyPolityData(d) {
+  const s = d.settings || {};
+  MAX_HEARTS = Number.isInteger(s.maxHearts) ? s.maxHearts : 5;
+  XP_PER_CORRECT = Number.isFinite(s.xpPerCorrect) ? s.xpPerCorrect : 50;
+  QUESTIONS_PER_RUN = Number.isInteger(s.questionsPerRun) ? s.questionsPerRun : 1;
+  hearts = MAX_HEARTS;
+  streak = 0;
+  xp = 0;
+
+  SKILL_TREE_DATA = d.nodes.map(n => Object.assign({}, n, { parents: n.parents || [] }));
+  NODE_BY_ID = new Map(SKILL_TREE_DATA.map(n => [n.id, n]));
+  MODULE_DATA = d.modules;
+
+  if (d.title) document.querySelector('.top__title').textContent = d.title;
+}
+
+async function loadPolity() {
+  console.log('[Kanthasth] Loading ' + DATA_URL + '...');
+  showStatus('Loading Polity\u2026', false);
+  say('Loading your targets. Stand by.');
+
+  try {
+    const res = await fetch(DATA_URL, { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' while fetching ' + DATA_URL);
+    const data = await res.json();
+    validatePolityData(data);
+    applyPolityData(data);
+
+    statusEl.remove();
+    renderHUD();
+    renderTree();
+    lineIndex = 0;
+    say(mentorLines()[0]);
+    console.log('[Kanthasth] Loaded ' + SKILL_TREE_DATA.length + ' nodes.');
+  } catch (err) {
+    console.error('[Kanthasth] Data load failed:', err);
+    const hint = location.protocol === 'file:'
+      ? ' Browsers block fetch() on file:// pages. Run a local server (python3 -m http.server) and open http://localhost:8000.'
+      : ' ' + err.message;
+    showStatus('Could not load the Polity data.' + hint, true);
+    say('Data failed to load. Fix it and retry. Do not waste the session.');
+  }
+}
+
+/* ------------------------------------------------------------------
    INIT
 ------------------------------------------------------------------- */
-renderHUD();
-renderTree();
-say(mentorLines()[0]);
-syncBottomPadding();
+function init() {
+  renderHUD();
+  syncBottomPadding();
+  loadPolity();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
