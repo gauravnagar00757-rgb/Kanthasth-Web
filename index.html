@@ -24,6 +24,19 @@
     </div>
   </main>
 
+  <div class="arena" id="arena" role="dialog" aria-modal="true" aria-labelledby="arena-title" hidden>
+    <div class="arena__card" id="arena-card">
+      <div class="arena__head">
+        <h2 class="arena__title" id="arena-title"></h2>
+        <button class="arena__voice" id="arena-voice" type="button" aria-pressed="true">&#128266; Voice on</button>
+        <button class="arena__close" id="arena-close" type="button" aria-label="Leave arena">&#10005;</button>
+      </div>
+      <p class="arena__count" id="arena-count"></p>
+      <p class="arena__q" id="arena-question"></p>
+      <div class="arena__options" id="arena-options"></div>
+    </div>
+  </div>
+
   <aside class="mentor is-open" id="mentor" aria-label="AI mentor">
     <div class="mentor__hud">
       <div class="stat" id="stat-hearts" aria-label="Hearts"></div>

@@ -17,7 +17,44 @@ const SKILL_TREE_DATA = [
   { id: 'polity_boss',        title: 'Polity Boss Test',     state: 'locked',    x: 50, y: 5, parents: ['judiciary', 'federalism'],     deck: 'polity_boss' }
 ];
 
-const PLAYER = { hearts: 5, maxHearts: 5, streak: 3, xp: 150 };
+/* ------------------------------------------------------------------
+   GLOBAL GAME STATE
+------------------------------------------------------------------- */
+const MAX_HEARTS = 5;
+const XP_PER_CORRECT = 50;
+const QUESTIONS_PER_RUN = 1; // questions asked before a node completes; raise it when modules have more content
+let hearts = 5;
+let streak = 0;
+let xp = 0;
+
+/* ------------------------------------------------------------------
+   MODULE DATA (keyed by node id)
+   correctAnswer must match one of the options exactly
+------------------------------------------------------------------- */
+const MODULE_DATA = {
+  fundamental_rights: {
+    questions: [
+      {
+        question: 'Which Article of the Constitution of India guarantees the Right to Life and Personal Liberty?',
+        options: ['Article 19', 'Article 20', 'Article 21', 'Article 22'],
+        correctAnswer: 'Article 21',
+        mentorScolding: 'Focus! Article 21 is life and liberty. You just lost a heart and your streak. Try again!'
+      },
+      {
+        question: 'The Right to Education was made a Fundamental Right (Article 21A) by which Constitutional Amendment?',
+        options: ['42nd Amendment', '44th Amendment', '86th Amendment', '93rd Amendment'],
+        correctAnswer: '86th Amendment',
+        mentorScolding: 'Sloppy. The 86th Amendment gave us Article 21A. Dates and numbers win this exam. You lost a heart. Recover.'
+      },
+      {
+        question: 'Who described Article 32, the Right to Constitutional Remedies, as the heart and soul of the Constitution?',
+        options: ['Jawaharlal Nehru', 'Dr. B. R. Ambedkar', 'Rajendra Prasad', 'Sardar Patel'],
+        correctAnswer: 'Dr. B. R. Ambedkar',
+        mentorScolding: 'Unacceptable. Ambedkar called Article 32 the heart and soul. This is a one-mark gift and you dropped it. Streak gone. Rebuild.'
+      }
+    ]
+  }
+};
 
 /* ------------------------------------------------------------------
    LAYOUT CONSTANTS (px)
@@ -141,18 +178,18 @@ const bubbleEl = document.getElementById('bubble');
 let lineIndex = 0;
 
 function renderHUD() {
-  const lost = PLAYER.maxHearts - PLAYER.hearts;
-  const hearts = document.getElementById('stat-hearts');
-  hearts.className = 'stat stat--hearts';
-  hearts.textContent = '\u2764\uFE0F'.repeat(PLAYER.hearts) + '\uD83D\uDDA4'.repeat(lost);
+  const lost = MAX_HEARTS - hearts;
+  const heartsEl = document.getElementById('stat-hearts');
+  heartsEl.className = 'stat stat--hearts';
+  heartsEl.textContent = '\u2764\uFE0F'.repeat(hearts) + '\uD83D\uDDA4'.repeat(lost);
 
-  const streak = document.getElementById('stat-streak');
-  streak.className = 'stat stat--streak';
-  streak.textContent = '\uD83D\uDD25 ' + PLAYER.streak;
+  const streakEl = document.getElementById('stat-streak');
+  streakEl.className = 'stat stat--streak';
+  streakEl.textContent = '\uD83D\uDD25 ' + streak;
 
-  const xp = document.getElementById('stat-xp');
-  xp.className = 'stat stat--xp';
-  xp.textContent = '\u26A1 ' + PLAYER.xp;
+  const xpEl = document.getElementById('stat-xp');
+  xpEl.className = 'stat stat--xp';
+  xpEl.textContent = '\u26A1 ' + xp;
 }
 
 function currentTarget() {
@@ -162,11 +199,14 @@ function currentTarget() {
 function mentorLines() {
   const target = currentTarget();
   const done = SKILL_TREE_DATA.filter(n => n.state === 'completed').length;
+  if (hearts <= 0) return ['No hearts left. Revise your notes. Come back sharper.'];
   if (!target) return ['All modules cleared. Now revise. Mocks are the next battlefield.'];
   return [
     `Target: Clear the \u2018${target.title}\u2019 node today. Do not break the streak.`,
-    `${PLAYER.streak}-day streak. Protect it. One module before anything else.`,
-    `Hearts: ${PLAYER.hearts}/${PLAYER.maxHearts}. Each wrong answer costs one. Accuracy over speed.`,
+    streak > 0
+      ? `${streak} correct in a row. Protect it. One module before anything else.`
+      : 'Streak is zero. Build it from your next correct answer. No excuses.',
+    `Hearts: ${hearts}/${MAX_HEARTS}. Each wrong answer costs one. Accuracy over speed.`,
     `${done} of ${SKILL_TREE_DATA.length} cleared. Motivation fades. Discipline does not.`
   ];
 }
@@ -195,6 +235,7 @@ function setMentorOpen(open) {
 // Keep the last tree row clear of the floating widget
 function syncBottomPadding() {
   document.body.style.paddingBottom = (mentorEl.offsetHeight + 16) + 'px';
+  document.documentElement.style.setProperty('--mentor-h', mentorEl.offsetHeight + 'px');
 }
 
 /* ------------------------------------------------------------------
@@ -206,8 +247,7 @@ treeEl.addEventListener('click', e => {
   const node = NODE_BY_ID.get(btn.dataset.id);
 
   if (node.state === 'unlocked') {
-    alert('Starting module...\n' + node.title);
-    // Phase 2: route to the flashcard player, e.g. location.href = 'flashcards.html?deck=' + node.deck;
+    openArena(node, btn);
   } else if (node.state === 'locked') {
     const missing = node.parents
       .map(id => NODE_BY_ID.get(id))
@@ -231,6 +271,204 @@ document.getElementById('mentor-toggle').addEventListener('click', () => {
 // Redraw connectors whenever the tree width changes (rotation, resize)
 new ResizeObserver(drawLinks).observe(treeEl);
 new ResizeObserver(syncBottomPadding).observe(mentorEl);
+
+/* ------------------------------------------------------------------
+   ARENA (question modal) + STRICT VOICE
+------------------------------------------------------------------- */
+const arenaEl = document.getElementById('arena');
+const arenaCard = document.getElementById('arena-card');
+const arenaTitle = document.getElementById('arena-title');
+const arenaCount = document.getElementById('arena-count');
+const arenaQuestion = document.getElementById('arena-question');
+const arenaOptions = document.getElementById('arena-options');
+const voiceBtn = document.getElementById('arena-voice');
+
+const HAS_SPEECH = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+let voices = [];
+let voiceOn = true;
+let arena = null; // { node, questions, index, busy, opener }
+let alertTimer = null;
+
+if (HAS_SPEECH) {
+  const loadVoices = () => { voices = speechSynthesis.getVoices(); };
+  loadVoices();
+  speechSynthesis.addEventListener('voiceschanged', loadVoices); // voices load async in Chrome
+} else {
+  voiceBtn.hidden = true;
+}
+
+function pickVoice() {
+  return voices.find(v => /en-IN/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) || null;
+}
+
+// Lower pitch + faster rate = clipped, authoritative delivery
+function speak(text) {
+  if (!HAS_SPEECH || !voiceOn) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const voice = pickVoice();
+  if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = 'en-IN'; }
+  u.pitch = 0.8;
+  u.rate = 1.1;
+  u.volume = 1;
+  speechSynthesis.speak(u);
+}
+
+function stopSpeaking() {
+  if (HAS_SPEECH) speechSynthesis.cancel();
+}
+
+function alertMentor(text) {
+  setMentorOpen(true);
+  say(text);
+  mentorEl.classList.add('is-alert');
+  clearTimeout(alertTimer);
+  alertTimer = setTimeout(() => mentorEl.classList.remove('is-alert'), 2600);
+}
+
+function shakeArena() {
+  arenaCard.classList.remove('is-shaking');
+  void arenaCard.offsetWidth;
+  arenaCard.classList.add('is-shaking');
+  setTimeout(() => arenaCard.classList.remove('is-shaking'), 450);
+}
+
+function renderQuestion() {
+  const q = arena.questions[arena.index];
+  arenaCount.textContent = 'Question ' + (arena.index + 1) + ' of ' + arena.questions.length;
+  arenaQuestion.textContent = q.question;
+  arenaOptions.replaceChildren();
+
+  q.options.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'option';
+    b.dataset.value = opt;
+
+    const key = document.createElement('span');
+    key.className = 'option__key';
+    key.textContent = String.fromCharCode(65 + i);
+
+    const txt = document.createElement('span');
+    txt.textContent = opt;
+
+    b.append(key, txt);
+    arenaOptions.appendChild(b);
+  });
+}
+
+function openArena(node, opener) {
+  if (hearts <= 0) {
+    alertMentor('No hearts left. Revise your notes and come back sharper. Weakness does not get a second attempt today.');
+    return;
+  }
+  const mod = MODULE_DATA[node.id];
+  if (!mod) {
+    alertMentor(`\u2018${node.title}\u2019 has no questions loaded yet. Train on another node.`);
+    return;
+  }
+  arena = { node, questions: mod.questions.slice(0, QUESTIONS_PER_RUN), index: 0, busy: false, opener };
+  arenaTitle.textContent = node.title;
+  renderQuestion();
+  arenaEl.hidden = false;
+  document.body.classList.add('arena-open');
+  say('Read carefully. A wrong answer costs a heart and your streak.');
+  arenaOptions.querySelector('.option').focus();
+}
+
+function closeArena() {
+  stopSpeaking();
+  arenaEl.hidden = true;
+  document.body.classList.remove('arena-open');
+  const opener = arena && arena.opener;
+  arena = null;
+  if (opener && document.contains(opener)) opener.focus();
+}
+
+function unlockChildren() {
+  SKILL_TREE_DATA.forEach(n => {
+    if (n.state === 'locked' && n.parents.every(id => NODE_BY_ID.get(id).state === 'completed')) {
+      n.state = 'unlocked';
+    }
+  });
+}
+
+function completeNode(node) {
+  node.state = 'completed';
+  unlockChildren();
+  closeArena();
+  renderTree();
+  lineIndex = 0;
+  say(mentorLines()[0]);
+  const next = document.querySelector('.node--unlocked');
+  if (next) next.focus({ preventScroll: true });
+}
+
+function handleCorrect(btn) {
+  arena.busy = true;
+  stopSpeaking();
+  btn.classList.add('is-correct');
+  arenaOptions.querySelectorAll('.option').forEach(b => { b.disabled = true; });
+
+  xp += XP_PER_CORRECT;
+  streak += 1;
+  renderHUD();
+  say(`Correct. +${XP_PER_CORRECT} XP. Streak: ${streak}. Do not get comfortable.`);
+
+  const node = arena.node;
+  setTimeout(() => {
+    arena.index += 1;
+    if (arena.index < arena.questions.length) {
+      renderQuestion();
+      arena.busy = false;
+    } else {
+      completeNode(node);
+    }
+  }, 950);
+}
+
+function handleWrong(btn, q) {
+  btn.classList.add('is-wrong');
+  btn.disabled = true;
+
+  hearts = Math.max(0, hearts - 1);
+  streak = 0;
+  renderHUD();
+  shakeArena();
+
+  if (hearts === 0) {
+    arena.busy = true;
+    arenaOptions.querySelectorAll('.option').forEach(b => { b.disabled = true; });
+    const text = q.mentorScolding + ' You are out of hearts. Session over. Revise, then return.';
+    alertMentor(text);
+    speak(text);
+    setTimeout(closeArena, 3200);
+    return;
+  }
+  alertMentor(q.mentorScolding);
+  speak(q.mentorScolding);
+}
+
+arenaOptions.addEventListener('click', e => {
+  const btn = e.target.closest('.option');
+  if (!btn || btn.disabled || !arena || arena.busy) return;
+  const q = arena.questions[arena.index];
+  if (btn.dataset.value === q.correctAnswer) handleCorrect(btn);
+  else handleWrong(btn, q);
+});
+
+document.getElementById('arena-close').addEventListener('click', closeArena);
+
+voiceBtn.addEventListener('click', () => {
+  voiceOn = !voiceOn;
+  voiceBtn.setAttribute('aria-pressed', String(voiceOn));
+  voiceBtn.textContent = voiceOn ? '\uD83D\uDD0A Voice on' : '\uD83D\uDD07 Voice off';
+  if (!voiceOn) stopSpeaking();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && arena) closeArena();
+});
 
 /* ------------------------------------------------------------------
    INIT
