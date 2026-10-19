@@ -466,12 +466,31 @@ arenaOptions.addEventListener('click', e => {
 document.getElementById('arena-close').addEventListener('click', leaveArena);
 continueBtn.addEventListener('click', onContinue);
 
-voiceBtn.addEventListener('click', () => {
-  voiceOn = !voiceOn;
-  voiceBtn.setAttribute('aria-pressed', String(voiceOn));
-  voiceBtn.textContent = voiceOn ? '\uD83D\uDD0A Voice on' : '\uD83D\uDD07 Voice off';
-  if (!voiceOn) stopSpeaking();
-});
+const SETTINGS_KEY = 'kanthasth.settings';
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ voice: voiceOn })); } catch (_) { /* storage unavailable */ }
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (s && typeof s.voice === 'boolean') setVoice(s.voice, false);
+  } catch (_) { /* no settings yet, or storage unavailable */ }
+}
+
+// One switch for the mentor voice, shared by the arena button and the Settings tab
+function setVoice(on, persist = true) {
+  voiceOn = on;
+  voiceBtn.setAttribute('aria-pressed', String(on));
+  voiceBtn.textContent = on ? '\uD83D\uDD0A Voice on' : '\uD83D\uDD07 Voice off';
+  const sw = document.getElementById('set-voice');
+  if (sw) sw.setAttribute('aria-checked', String(on));
+  if (!on) stopSpeaking();
+  if (persist) saveSettings();
+}
+
+voiceBtn.addEventListener('click', () => setVoice(!voiceOn));
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && arena) leaveArena();
@@ -509,7 +528,8 @@ function saveProgress() {
   if (SKILL_TREE_DATA.length === 0) return; // never overwrite a save before the tree has loaded
   const nodes = {};
   SKILL_TREE_DATA.forEach(n => { nodes[n.id] = n.state; });
-  const payload = { v: SAVE_VERSION, hearts, streak, xp, heartsEmptyAt, nodes, savedAt: Date.now() };
+  const next = SKILL_TREE_DATA.find(n => n.state === 'unlocked');
+  const payload = { v: SAVE_VERSION, hearts, streak, xp, heartsEmptyAt, nodes, target: next ? next.title : null, savedAt: Date.now() };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
   } catch (err) { // private mode, storage disabled, or quota full: the game keeps running
@@ -690,28 +710,32 @@ function startGameplay() {
 }
 
 /* ------------------------------------------------------------------
-   MAIN MENU + SCREEN TRANSITIONS
+   DASHBOARD (home screen) + SCREEN TRANSITIONS
 ------------------------------------------------------------------- */
+const PLAYER_NAME = 'Gaurav';
+const POLITY_MODULES = 9;
+const FADE_MS = 450;
+
 const SUBJECTS = [
   { id: 'polity',    title: 'Indian Polity',   blurb: 'Constitution, rights, Parliament', unlocked: true },
   { id: 'history',   title: 'History',         blurb: 'Ancient to modern India',          unlocked: false },
   { id: 'geography', title: 'Geography',       blurb: 'India and the world',              unlocked: false },
-  { id: 'science',   title: 'General Science', blurb: 'Physics, chemistry, biology',      unlocked: false }
+  { id: 'economy',   title: 'Economy',         blurb: 'Growth, banking, budgets',         unlocked: false },
+  { id: 'science',   title: 'General Science', blurb: 'Physics, chemistry, biology',      unlocked: false },
+  { id: 'maths',     title: 'Mathematics',     blurb: 'Arithmetic and algebra',           unlocked: false }
 ];
 const POLITY_ICON = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 3L3 8v2h18V8zM5 11h2v7H5zM9 11h2v7H9zM13 11h2v7h-2zM17 11h2v7h-2zM3 19h18v2H3z" fill="currentColor"/></svg>';
-const FADE_MS = 450;
 
-const menuScreen = document.getElementById('main-menu-screen');
+const dashboardScreen = document.getElementById('dashboard-screen');
 const gameScreen = document.getElementById('gameplay-screen');
-const resumeBtn = document.getElementById('btn-resume');
-const resumeMeta = document.getElementById('resume-meta');
-const newBtn = document.getElementById('btn-new');
 const confirmEl = document.getElementById('confirm');
 const confirmText = document.getElementById('confirm-text');
 const confirmOk = document.getElementById('confirm-ok');
 const confirmCancel = document.getElementById('confirm-cancel');
+const eraseBtn = document.getElementById('btn-erase');
+const voiceSwitch = document.getElementById('set-voice');
 
-let gameStarted = false;   // the game logic (fetch, HUD, save restore) starts on the first entry only
+let gameStarted = false;   // fetch, HUD and save restore run on the first entry only
 let transitioning = false;
 
 function prefersReducedMotion() {
@@ -742,31 +766,6 @@ function resetState() {
   lineIndex = 0;
 }
 
-function enterGameplay(fresh) {
-  if (transitioning) return;
-  transitioning = true;
-  swapScreens(menuScreen, gameScreen, () => {
-    if (fresh || !gameStarted) {
-      if (fresh) resetState();
-      gameStarted = true;
-      startGameplay();
-    }
-    gameScreen.focus({ preventScroll: true });
-    transitioning = false;
-  });
-}
-
-function showMenu() {
-  if (transitioning) return;
-  transitioning = true;
-  if (arena) closeArena();
-  stopSpeaking();
-  swapScreens(gameScreen, menuScreen, () => {
-    refreshMenu();
-    transitioning = false;
-  });
-}
-
 function saveSummary(s) {
   const states = s.nodes && typeof s.nodes === 'object' ? Object.values(s.nodes) : [];
   return {
@@ -774,35 +773,62 @@ function saveSummary(s) {
     streak: intIn(s.streak, 0, 1000000, 0),
     xp: intIn(s.xp, 0, 1000000000, 0),
     done: states.filter(v => v === 'completed').length,
-    total: states.length
+    total: states.length,
+    target: typeof s.target === 'string' ? s.target : null,
+    hasSave: true
   };
 }
 
-// Resume is live only when a readable save exists; otherwise Start New becomes the main call to action
-function refreshMenu() {
+// The dashboard reads the save game; if storage is blocked it falls back to the live game state
+function currentSummary() {
   const s = readSave();
-  resumeBtn.disabled = !s;
-  resumeBtn.classList.toggle('btn--primary', Boolean(s));
-  resumeBtn.classList.toggle('btn--off', !s);
-  newBtn.classList.toggle('btn--primary', !s);
-  newBtn.classList.toggle('btn--ghost', Boolean(s));
-
-  resumeMeta.replaceChildren();
-  if (!s) {
-    resumeMeta.textContent = 'No save found';
-    return;
+  if (s) return saveSummary(s);
+  if (gameStarted && SKILL_TREE_DATA.length) {
+    const next = SKILL_TREE_DATA.find(n => n.state === 'unlocked');
+    return {
+      hearts, streak, xp,
+      done: SKILL_TREE_DATA.filter(n => n.state === 'completed').length,
+      total: SKILL_TREE_DATA.length,
+      target: next ? next.title : null,
+      hasSave: true
+    };
   }
-  const t = saveSummary(s);
-  [`\u2764\uFE0F ${t.hearts}`, `\u26A1 ${t.xp} XP`, `\uD83D\uDD25 ${t.streak}`, `${t.done} of ${t.total} cleared`].forEach(text => {
-    const span = document.createElement('span');
-    span.textContent = text;
-    resumeMeta.appendChild(span);
-  });
+  return { hearts: MAX_HEARTS, streak: 0, xp: 0, done: 0, total: 0, target: null, hasSave: false };
 }
 
-function renderSubjects() {
+function renderHero(t) {
+  const total = t.total || POLITY_MODULES;
+  const pct = Math.min(100, Math.round((t.done / total) * 100));
+  const cleared = t.hasSave && t.done >= total;
+  let title, line, cta;
+
+  if (!t.hasSave) {
+    title = 'Clear your first module';
+    line = 'No excuses. Start today and build the streak.';
+    cta = 'Start Journey';
+  } else if (cleared) {
+    title = 'All modules cleared';
+    line = 'Now revise. Mocks are the next battlefield.';
+    cta = 'Revise Polity';
+  } else {
+    title = t.target ? `Clear \u2018${t.target}\u2019` : 'Continue your journey';
+    line = t.streak > 0 ? `Streak: ${t.streak}. Do not break it.` : 'Streak is zero. Rebuild it today.';
+    cta = 'Resume Journey';
+  }
+
+  document.getElementById('hero-title').textContent = title;
+  document.getElementById('hero-line').textContent = line;
+  document.getElementById('hero-count').textContent = `${t.done} of ${total} modules cleared`;
+  document.getElementById('hero-fill').style.width = pct + '%';
+  document.getElementById('hero-bar').setAttribute('aria-valuenow', String(pct));
+  document.getElementById('hero-cta').textContent = cta;
+}
+
+function renderSubjects(t) {
+  const total = t.total || POLITY_MODULES;
   const wrap = document.getElementById('subjects');
   wrap.replaceChildren();
+
   SUBJECTS.forEach(sub => {
     const card = document.createElement('button');
     card.type = 'button';
@@ -824,38 +850,115 @@ function renderSubjects() {
 
     const status = document.createElement('span');
     status.className = 'subject__status';
-    status.textContent = sub.unlocked ? 'Available now' : 'Locked';
+    status.textContent = !sub.unlocked ? 'Locked' : (t.hasSave ? `${t.done} of ${total} cleared` : 'Available now');
 
-    card.append(icon, name, blurb, status);
+    card.append(icon, name, blurb);
+    if (sub.unlocked) {
+      const bar = document.createElement('span');
+      bar.className = 'subject__bar';
+      const fill = document.createElement('span');
+      fill.style.width = Math.min(100, Math.round((t.done / total) * 100)) + '%';
+      bar.appendChild(fill);
+      card.appendChild(bar);
+    }
+    card.appendChild(status);
     wrap.appendChild(card);
   });
 }
 
-/* Overwrite warning */
-function openConfirm(s) {
-  const t = saveSummary(s);
-  confirmText.textContent = `Starting over erases ${t.xp} XP, a streak of ${t.streak} and ${t.done} cleared modules. This cannot be undone.`;
+function refreshDashboard() {
+  const t = currentSummary();
+  document.getElementById('dash-streak').textContent = '\uD83D\uDD25 ' + t.streak;
+  document.getElementById('dash-xp').textContent = '\u26A1 ' + t.xp;
+  renderHero(t);
+  renderSubjects(t);
+  document.getElementById('lb-meta').textContent = `\u26A1 ${t.xp} XP   \uD83D\uDD25 ${t.streak}`;
+  eraseBtn.disabled = !t.hasSave;
+  document.getElementById('erase-desc').textContent = t.hasSave
+    ? 'Wipes XP, streak, hearts and cleared modules.'
+    : 'Nothing to erase yet.';
+}
+
+function showView(name) {
+  ['home', 'leaderboard', 'settings'].forEach(v => {
+    document.getElementById('view-' + v).classList.toggle('hidden', v !== name);
+  });
+  document.querySelectorAll('.dock__btn').forEach(b => {
+    const on = b.dataset.view === name;
+    b.classList.toggle('is-active', on);
+    if (on) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  window.scrollTo(0, 0);
+}
+
+function enterGameplay() {
+  if (transitioning) return;
+  transitioning = true;
+  swapScreens(dashboardScreen, gameScreen, () => {
+    if (!gameStarted) {
+      gameStarted = true;
+      startGameplay(); // existing logic: restore save, fetch polity.json, render the tree
+    }
+    gameScreen.focus({ preventScroll: true });
+    transitioning = false;
+  });
+}
+
+function showDashboard() {
+  if (transitioning) return;
+  transitioning = true;
+  if (arena) closeArena();
+  stopSpeaking();
+  swapScreens(gameScreen, dashboardScreen, () => {
+    refreshDashboard();
+    transitioning = false;
+  });
+}
+
+/* Erase warning */
+function openConfirm() {
+  const t = currentSummary();
+  confirmText.textContent = `This erases ${t.xp} XP, a streak of ${t.streak} and ${t.done} cleared modules. It cannot be undone.`;
   confirmEl.classList.remove('hidden');
   confirmCancel.focus();
 }
 function closeConfirm() {
   confirmEl.classList.add('hidden');
-  newBtn.focus();
+  eraseBtn.focus();
 }
 
-resumeBtn.addEventListener('click', () => enterGameplay(false));
+/* Events */
+document.getElementById('hero-cta').addEventListener('click', enterGameplay);
+document.getElementById('btn-back').addEventListener('click', showDashboard);
 
-newBtn.addEventListener('click', () => {
-  const s = readSave();
-  if (s) openConfirm(s);
-  else enterGameplay(true);
+document.getElementById('subjects').addEventListener('click', e => {
+  const card = e.target.closest('.subject');
+  if (!card) return;
+  if (card.classList.contains('subject--locked')) {
+    card.classList.remove('is-denied');
+    void card.offsetWidth;
+    card.classList.add('is-denied');
+    return;
+  }
+  enterGameplay();
 });
 
+document.querySelector('.dock').addEventListener('click', e => {
+  const btn = e.target.closest('.dock__btn');
+  if (btn) showView(btn.dataset.view);
+});
+
+voiceSwitch.addEventListener('click', () => setVoice(!voiceOn));
+eraseBtn.addEventListener('click', openConfirm);
 confirmCancel.addEventListener('click', closeConfirm);
 confirmOk.addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* storage unavailable */ }
   confirmEl.classList.add('hidden');
-  enterGameplay(true);
+  resetState();
+  gameStarted = false; // the next entry reloads the data and starts from the defaults
+  refreshDashboard();
+  eraseBtn.focus();
 });
 confirmEl.addEventListener('keydown', e => {
   if (e.key !== 'Tab') return;
@@ -868,24 +971,18 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !confirmEl.classList.contains('hidden')) closeConfirm();
 });
 
-document.getElementById('subjects').addEventListener('click', e => {
-  const card = e.target.closest('.subject');
-  if (!card) return;
-  if (card.classList.contains('subject--locked')) {
-    card.classList.remove('is-denied');
-    void card.offsetWidth;
-    card.classList.add('is-denied');
-    return;
+function initDashboard() {
+  document.getElementById('dash-welcome').textContent = 'Welcome, ' + PLAYER_NAME;
+  document.getElementById('lb-avatar').textContent = PLAYER_NAME.charAt(0).toUpperCase();
+  document.getElementById('lb-name').textContent = PLAYER_NAME;
+  loadSettings();
+  if (!HAS_SPEECH) {
+    voiceSwitch.disabled = true;
+    voiceSwitch.setAttribute('aria-checked', 'false');
+    document.getElementById('voice-desc').textContent = 'This browser does not support speech.';
   }
-  enterGameplay(false);
-});
-
-document.getElementById('btn-menu').addEventListener('click', showMenu);
-
-function initMenu() {
-  renderSubjects();
-  refreshMenu();
+  refreshDashboard();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMenu);
-else initMenu();
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDashboard);
+else initDashboard();

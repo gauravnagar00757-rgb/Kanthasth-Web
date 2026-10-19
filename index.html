@@ -4,45 +4,109 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0E1220">
-  <title>Project Kanthasth – Skill Tree</title>
+  <title>Kanthasth</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ============ MAIN MENU ============ -->
-  <div id="main-menu-screen">
-    <div class="menu__bg" aria-hidden="true"><div class="menu__grid"></div></div>
-
-    <div class="menu__inner">
-      <header class="menu__hero">
-        <h1 class="menu__title">KANTHASTH</h1>
-        <p class="menu__sub">The Strict SSC CGL AI Mentor</p>
-      </header>
-
-      <nav class="menu__actions" aria-label="Main menu">
-        <button class="btn btn--off" id="btn-resume" type="button" disabled>
-          <span class="btn__label">Resume Journey</span>
-          <span class="btn__meta" id="resume-meta">No save found</span>
-        </button>
-        <button class="btn btn--primary" id="btn-new" type="button">
-          <span class="btn__label">Start New Journey</span>
-        </button>
-      </nav>
-
-      <section class="menu__subjects" aria-labelledby="subjects-title">
-        <h2 class="menu__h2" id="subjects-title">Choose your subject</h2>
-        <div class="subjects" id="subjects"></div>
-      </section>
+  <!-- ============ DASHBOARD (home) ============ -->
+  <div id="dashboard-screen">
+    <div class="dash__bg" aria-hidden="true">
+      <i class="orb orb--violet"></i><i class="orb orb--cyan"></i><i class="orb orb--pink"></i>
     </div>
 
-    <div class="confirm hidden" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
-      <div class="confirm__card">
-        <h2 class="confirm__title" id="confirm-title">Erase your progress?</h2>
-        <p class="confirm__text" id="confirm-text"></p>
-        <div class="confirm__actions">
-          <button class="btn btn--ghost" id="confirm-cancel" type="button">Keep my save</button>
-          <button class="btn btn--danger" id="confirm-ok" type="button">Erase and start over</button>
+    <header class="dash__top">
+      <div class="dash__who">
+        <h1 class="dash__welcome" id="dash-welcome">Welcome</h1>
+        <p class="dash__tag">The Strict SSC CGL AI Mentor</p>
+      </div>
+      <div class="dash__stats">
+        <span class="pill pill--streak" id="dash-streak" aria-label="Streak">&#128293; 0</span>
+        <span class="pill pill--xp" id="dash-xp" aria-label="Total XP">&#9889; 0</span>
+      </div>
+    </header>
+
+    <main class="dash__main">
+      <!-- Home -->
+      <section class="view" id="view-home">
+        <article class="hero glass" id="hero">
+          <div class="hero__top">
+            <span class="hero__chip">Daily Target</span>
+            <span class="hero__subject">Indian Polity</span>
+          </div>
+          <h2 class="hero__title" id="hero-title"></h2>
+          <p class="hero__line" id="hero-line"></p>
+          <div class="hero__bar" id="hero-bar" role="progressbar" aria-label="Polity progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span id="hero-fill"></span>
+          </div>
+          <p class="hero__count" id="hero-count"></p>
+          <button class="btn btn--primary hero__cta" id="hero-cta" type="button">Start Journey</button>
+        </article>
+
+        <h2 class="dash__h2">Subjects</h2>
+        <div class="subjects" id="subjects"></div>
+      </section>
+
+      <!-- Leaderboard -->
+      <section class="view hidden" id="view-leaderboard">
+        <h2 class="dash__h2">Leaderboard</h2>
+        <div class="glass lb-you">
+          <span class="lb-you__avatar" id="lb-avatar"></span>
+          <div class="lb-you__info">
+            <p class="lb-you__name" id="lb-name"></p>
+            <p class="lb-you__meta" id="lb-meta"></p>
+          </div>
+          <span class="lb-you__rank">Unranked</span>
         </div>
+        <div class="glass lb-empty">
+          <p>Global ranks open once accounts go live. Until then, your only rival is yesterday&rsquo;s you.</p>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view hidden" id="view-settings">
+        <h2 class="dash__h2">Settings</h2>
+        <div class="glass setting">
+          <div class="setting__text">
+            <p class="setting__name">Mentor voice</p>
+            <p class="setting__desc" id="voice-desc">The mentor speaks out loud when you answer wrong.</p>
+          </div>
+          <button class="switch" id="set-voice" type="button" role="switch" aria-checked="true" aria-label="Mentor voice"><span></span></button>
+        </div>
+        <div class="glass setting">
+          <div class="setting__text">
+            <p class="setting__name">Erase progress</p>
+            <p class="setting__desc" id="erase-desc">Wipes XP, streak, hearts and cleared modules.</p>
+          </div>
+          <button class="btn btn--danger-outline" id="btn-erase" type="button">Erase</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="dock" aria-label="Primary">
+      <button class="dock__btn is-active" type="button" data-view="home" aria-current="page">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3.500 11L12 4l8.500 7M6 9.500V20h4.500v-5.500h3V20H18V9.500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="dock__btn" type="button" data-view="leaderboard">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 01-8 0zM8 6H5v1.500A3 3 0 008 10.500M16 6h3v1.500a3 3 0 01-3 3M12 13v4M8.500 20h7M10 17h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Leaderboard</span>
+      </button>
+      <button class="dock__btn" type="button" data-view="settings">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.500M12 18.500V21M3 12h2.500M18.500 12H21M5.600 5.600l1.800 1.800M16.600 16.600l1.800 1.800M5.600 18.400l1.800-1.800M16.600 7.400l1.800-1.800" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Erase warning -->
+  <div class="confirm hidden" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+    <div class="confirm__card">
+      <h2 class="confirm__title" id="confirm-title">Erase your progress?</h2>
+      <p class="confirm__text" id="confirm-text"></p>
+      <div class="confirm__actions">
+        <button class="btn btn--ghost" id="confirm-cancel" type="button">Keep my save</button>
+        <button class="btn btn--danger" id="confirm-ok" type="button">Erase progress</button>
       </div>
     </div>
   </div>
@@ -51,8 +115,11 @@
   <div id="gameplay-screen" class="hidden" tabindex="-1">
 
   <header class="top">
+    <button class="top__back" id="btn-back" type="button" aria-label="Back to dashboard">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back
+    </button>
     <h1 class="top__title">Polity</h1>
-    <button class="top__menu" id="btn-menu" type="button">Menu</button>
     <p class="top__sub" id="progress-text">0 of 0 modules cleared</p>
     <div class="top__bar" role="progressbar" aria-label="Polity progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar">
       <span class="top__fill" id="progress-fill"></span>
