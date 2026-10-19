@@ -25,19 +25,22 @@
           "question": "Which Article of the Constitution of India guarantees the Right to Life and Personal Liberty?",
           "options": ["Article 19", "Article 20", "Article 21", "Article 22"],
           "correctAnswer": "Article 21",
-          "mentorScolding": "Focus! Article 21 is life and liberty. You just lost a heart and your streak. Try again!"
+          "mentorScolding": "Focus! Article 21 is life and liberty. You just lost a heart and your streak. Try again!",
+          "explanation": "Article 21 protects life and personal liberty, and nobody can be deprived of them except by a procedure established by law. The courts have read privacy, dignity and speedy trial into it. Article 19 holds the freedoms, Article 20 protects against unfair conviction, and Article 22 covers arrest and detention."
         },
         {
           "question": "The Right to Education was made a Fundamental Right (Article 21A) by which Constitutional Amendment?",
           "options": ["42nd Amendment", "44th Amendment", "86th Amendment", "93rd Amendment"],
           "correctAnswer": "86th Amendment",
-          "mentorScolding": "Sloppy. The 86th Amendment gave us Article 21A. Dates and numbers win this exam. You lost a heart. Recover."
+          "mentorScolding": "Sloppy. The 86th Amendment gave us Article 21A. Dates and numbers win this exam. You lost a heart. Recover.",
+          "explanation": "The 86th Amendment Act, 2002 inserted Article 21A, making free and compulsory education a Fundamental Right for children aged 6 to 14. The Right to Education Act, 2009 brought it into force on 1 April 2010. The 42nd Amendment added Fundamental Duties, and the 44th removed the right to property from Part III."
         },
         {
           "question": "Who described Article 32, the Right to Constitutional Remedies, as the heart and soul of the Constitution?",
           "options": ["Jawaharlal Nehru", "Dr. B. R. Ambedkar", "Rajendra Prasad", "Sardar Patel"],
           "correctAnswer": "Dr. B. R. Ambedkar",
-          "mentorScolding": "Unacceptable. Ambedkar called Article 32 the heart and soul. This is a one-mark gift and you dropped it. Streak gone. Rebuild."
+          "mentorScolding": "Unacceptable. Ambedkar called Article 32 the heart and soul. This is a one-mark gift and you dropped it. Streak gone. Rebuild.",
+          "explanation": "Dr. B. R. Ambedkar called Article 32 the heart and soul of the Constitution. It lets a citizen go straight to the Supreme Court to enforce a Fundamental Right, through the writs of habeas corpus, mandamus, prohibition, certiorari and quo warranto."
         }
       ]
     },
@@ -47,19 +50,22 @@
           "question": "Who appoints the Prime Minister of India?",
           "options": ["The President", "The Speaker of Lok Sabha", "The Chief Justice of India", "The Vice President"],
           "correctAnswer": "The President",
-          "mentorScolding": "Wrong. The President appoints the Prime Minister. Basic structure, basic marks. Heart lost. Do not repeat this."
+          "mentorScolding": "Wrong. The President appoints the Prime Minister. Basic structure, basic marks. Heart lost. Do not repeat this.",
+          "explanation": "Under Article 75(1) the President appoints the Prime Minister, in practice the leader of the party or coalition that commands a majority in the Lok Sabha. The other ministers are appointed on the Prime Minister's advice."
         },
         {
           "question": "Which Article vests the executive power of the Union in the President?",
           "options": ["Article 52", "Article 53", "Article 74", "Article 75"],
           "correctAnswer": "Article 53",
-          "mentorScolding": "Careless. Article 53 is the executive power of the Union. Article 52 only says there shall be a President. Read the wording. Streak broken."
+          "mentorScolding": "Careless. Article 53 is the executive power of the Union. Article 52 only says there shall be a President. Read the wording. Streak broken.",
+          "explanation": "Article 53 vests the executive power of the Union in the President, to be used directly or through officers under him. Article 52 only says there shall be a President, Article 74 creates the Council of Ministers to aid and advise him, and Article 75 deals with the ministers."
         },
         {
           "question": "What is the minimum age to be eligible for election as President of India?",
           "options": ["25 years", "30 years", "35 years", "40 years"],
           "correctAnswer": "35 years",
-          "mentorScolding": "No. Thirty-five years for the President. Eligibility numbers repeat every year in this exam. Lock it in."
+          "mentorScolding": "No. Thirty-five years for the President. Eligibility numbers repeat every year in this exam. Lock it in.",
+          "explanation": "A candidate for President must be an Indian citizen, at least 35 years old, and qualified to be elected to the Lok Sabha (Article 58). The Vice President also has to be at least 35."
         }
       ]
     },
@@ -69,13 +75,15 @@
           "question": "The Directive Principles of State Policy are contained in which Part of the Constitution?",
           "options": ["Part III", "Part IV", "Part IV-A", "Part V"],
           "correctAnswer": "Part IV",
-          "mentorScolding": "Part IV. Part III is Fundamental Rights. Mixing them up costs marks every single year. Heart gone. Focus."
+          "mentorScolding": "Part IV. Part III is Fundamental Rights. Mixing them up costs marks every single year. Heart gone. Focus.",
+          "explanation": "The Directive Principles are in Part IV, Articles 36 to 51. They guide the State but cannot be enforced in court, and the idea comes from the Irish Constitution. Part III is Fundamental Rights and Part IV-A is Fundamental Duties."
         },
         {
           "question": "Which Article directs the State to secure a Uniform Civil Code for citizens?",
           "options": ["Article 40", "Article 44", "Article 48", "Article 51"],
           "correctAnswer": "Article 44",
-          "mentorScolding": "Article 44. Uniform Civil Code. You have seen this question before and still missed it. That is a discipline problem. Try again."
+          "mentorScolding": "Article 44. Uniform Civil Code. You have seen this question before and still missed it. That is a discipline problem. Try again.",
+          "explanation": "Article 44 asks the State to endeavour to secure a Uniform Civil Code for all citizens. Article 40 is about village panchayats, Article 48 about agriculture and animal husbandry, and Article 51 about international peace and security."
         }
       ]
     },
@@ -85,13 +93,15 @@
           "question": "Who presides over a joint sitting of both Houses of Parliament?",
           "options": ["The President", "The Vice President", "The Speaker of Lok Sabha", "The Chairman of Rajya Sabha"],
           "correctAnswer": "The Speaker of Lok Sabha",
-          "mentorScolding": "The Speaker of Lok Sabha presides over the joint sitting. Know who holds the chair. Heart lost. Streak reset."
+          "mentorScolding": "The Speaker of Lok Sabha presides over the joint sitting. Know who holds the chair. Heart lost. Streak reset.",
+          "explanation": "Under Article 108 the President summons a joint sitting to settle a deadlock over an ordinary Bill, and the Speaker of the Lok Sabha presides over it. Joint sittings are rare. The standard examples are the Dowry Prohibition Bill 1961, the Banking Service Commission Repeal Bill 1978 and the POTA Bill 2002."
         },
         {
           "question": "What is the maximum permissible gap between two sessions of Parliament?",
           "options": ["Three months", "Four months", "Six months", "Twelve months"],
           "correctAnswer": "Six months",
-          "mentorScolding": "Six months. Not a day more between sessions. Vague memory is not preparation. Sharpen up."
+          "mentorScolding": "Six months. Not a day more between sessions. Vague memory is not preparation. Sharpen up.",
+          "explanation": "Article 85 says that six months must not pass between the last sitting of one session and the first sitting of the next. That is why Parliament has to meet at least twice a year."
         }
       ]
     }

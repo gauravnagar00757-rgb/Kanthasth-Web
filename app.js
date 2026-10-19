@@ -200,7 +200,7 @@ function setMentorOpen(open) {
 
 // Keep the last tree row clear of the floating widget
 function syncBottomPadding() {
-  document.body.style.paddingBottom = (mentorEl.offsetHeight + 16) + 'px';
+  document.body.style.paddingBottom = mentorEl.offsetHeight ? (mentorEl.offsetHeight + 16) + 'px' : '0px';
   document.documentElement.style.setProperty('--mentor-h', mentorEl.offsetHeight + 'px');
 }
 
@@ -248,6 +248,10 @@ const arenaCount = document.getElementById('arena-count');
 const arenaQuestion = document.getElementById('arena-question');
 const arenaOptions = document.getElementById('arena-options');
 const voiceBtn = document.getElementById('arena-voice');
+const explainEl = document.getElementById('arena-explain');
+const explainVerdict = document.getElementById('explain-verdict');
+const explainText = document.getElementById('explain-text');
+const continueBtn = document.getElementById('arena-continue');
 
 const HAS_SPEECH = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 let voices = [];
@@ -301,6 +305,7 @@ function shakeArena() {
 
 function renderQuestion() {
   const q = arena.questions[arena.index];
+  explainEl.hidden = true;
   arenaCount.textContent = 'Question ' + (arena.index + 1) + ' of ' + arena.questions.length;
   arenaQuestion.textContent = q.question;
   arenaOptions.replaceChildren();
@@ -334,7 +339,7 @@ function openArena(node, opener) {
     alertMentor(`\u2018${node.title}\u2019 has no questions loaded yet. Train on another node.`);
     return;
   }
-  arena = { node, questions: mod.questions.slice(0, QUESTIONS_PER_RUN), index: 0, busy: false, opener };
+  arena = { node, questions: mod.questions.slice(0, QUESTIONS_PER_RUN), index: 0, busy: false, awaitingContinue: false, result: null, opener };
   arenaTitle.textContent = node.title;
   renderQuestion();
   arenaEl.hidden = false;
@@ -372,7 +377,22 @@ function completeNode(node) {
   if (next) next.focus({ preventScroll: true });
 }
 
-function handleCorrect(btn) {
+function showExplanation(q, result) {
+  arena.result = result;
+  arena.awaitingContinue = true;
+  const ok = result === 'correct';
+  explainEl.classList.toggle('explain--ok', ok);
+  explainEl.classList.toggle('explain--bad', !ok);
+  explainVerdict.textContent = ok
+    ? `Correct. +${XP_PER_CORRECT} XP`
+    : (result === 'gameover' ? 'Wrong. That was your last heart.' : 'Wrong. You lost a heart.');
+  explainText.textContent = q.explanation;
+  explainEl.hidden = false;
+  continueBtn.focus({ preventScroll: true });
+  explainEl.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+function handleCorrect(btn, q) {
   arena.busy = true;
   stopSpeaking();
   btn.classList.add('is-correct');
@@ -380,55 +400,71 @@ function handleCorrect(btn) {
 
   xp += XP_PER_CORRECT;
   streak += 1;
-  saveProgress();
-  renderHUD();
+  renderHUD(); // HUD reacts instantly; the reward is saved when the player presses Continue
   say(`Correct. +${XP_PER_CORRECT} XP. Streak: ${streak}. Do not get comfortable.`);
-
-  const node = arena.node;
-  setTimeout(() => {
-    arena.index += 1;
-    if (arena.index < arena.questions.length) {
-      renderQuestion();
-      arena.busy = false;
-    } else {
-      completeNode(node);
-    }
-  }, 950);
+  showExplanation(q, 'correct');
 }
 
 function handleWrong(btn, q) {
+  arena.busy = true;
   btn.classList.add('is-wrong');
-  btn.disabled = true;
+  arenaOptions.querySelectorAll('.option').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.value === q.correctAnswer) b.classList.add('is-answer');
+  });
 
   hearts = Math.max(0, hearts - 1);
   streak = 0;
   if (hearts === 0) heartsEmptyAt = Date.now();
-  saveProgress();
+  saveProgress(); // a penalty is saved at once, so closing the tab cannot dodge it
   renderHUD();
   shakeArena();
 
-  if (hearts === 0) {
-    arena.busy = true;
-    arenaOptions.querySelectorAll('.option').forEach(b => { b.disabled = true; });
-    const text = q.mentorScolding + ' You are out of hearts. Session over. Revise, then return.';
-    alertMentor(text);
-    speak(text);
-    setTimeout(closeArena, 3200);
+  const out = hearts === 0;
+  const text = out ? q.mentorScolding + ' You are out of hearts. Session over. Revise, then return.' : q.mentorScolding;
+  alertMentor(text);
+  speak(text);
+  showExplanation(q, out ? 'gameover' : 'wrong');
+}
+
+// Continue: commit the result, then move on or return to the Skill Tree
+function onContinue() {
+  if (!arena || !arena.awaitingContinue) return;
+  const a = arena;
+  a.awaitingContinue = false;
+
+  if (a.result === 'correct') {
+    saveProgress();
+    a.index += 1;
+    if (a.index < a.questions.length) {
+      a.busy = false;
+      renderQuestion();
+      arenaOptions.querySelector('.option').focus();
+      return;
+    }
+    completeNode(a.node); // marks the node completed, unlocks children, saves, returns to the tree
     return;
   }
-  alertMentor(q.mentorScolding);
-  speak(q.mentorScolding);
+  closeArena(); // wrong answers end the run; the node stays unlocked for another attempt
+}
+
+// Close / Esc must not skip the commit step once an answer has been given
+function leaveArena() {
+  if (!arena) return;
+  if (arena.awaitingContinue) onContinue();
+  else closeArena();
 }
 
 arenaOptions.addEventListener('click', e => {
   const btn = e.target.closest('.option');
   if (!btn || btn.disabled || !arena || arena.busy) return;
   const q = arena.questions[arena.index];
-  if (btn.dataset.value === q.correctAnswer) handleCorrect(btn);
+  if (btn.dataset.value === q.correctAnswer) handleCorrect(btn, q);
   else handleWrong(btn, q);
 });
 
-document.getElementById('arena-close').addEventListener('click', closeArena);
+document.getElementById('arena-close').addEventListener('click', leaveArena);
+continueBtn.addEventListener('click', onContinue);
 
 voiceBtn.addEventListener('click', () => {
   voiceOn = !voiceOn;
@@ -438,7 +474,7 @@ voiceBtn.addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && arena) closeArena();
+  if (e.key === 'Escape' && arena) leaveArena();
 });
 
 /* ------------------------------------------------------------------
@@ -588,8 +624,9 @@ function validatePolityData(d) {
     if (!mod || !Array.isArray(mod.questions) || mod.questions.length === 0) throw new Error(`modules."${nodeId}" needs a questions array`);
     mod.questions.forEach((q, i) => {
       const ok = q.question && Array.isArray(q.options) && q.options.length === 4 &&
-                 q.options.includes(q.correctAnswer) && q.mentorScolding;
-      if (!ok) throw new Error(`modules."${nodeId}".questions[${i}] is malformed (needs question, 4 options, a correctAnswer from the options, mentorScolding)`);
+                 q.options.includes(q.correctAnswer) && q.mentorScolding &&
+                 typeof q.explanation === 'string' && q.explanation.trim() !== '';
+      if (!ok) throw new Error(`modules."${nodeId}".questions[${i}] is malformed (needs question, 4 options, a correctAnswer from the options, mentorScolding, explanation)`);
     });
   });
 }
@@ -644,7 +681,7 @@ async function loadPolity() {
 /* ------------------------------------------------------------------
    INIT
 ------------------------------------------------------------------- */
-function init() {
+function startGameplay() {
   const saved = readSave();
   if (saved) applySavedStats(saved);
   renderHUD();
@@ -652,5 +689,203 @@ function init() {
   loadPolity();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-else init();
+/* ------------------------------------------------------------------
+   MAIN MENU + SCREEN TRANSITIONS
+------------------------------------------------------------------- */
+const SUBJECTS = [
+  { id: 'polity',    title: 'Indian Polity',   blurb: 'Constitution, rights, Parliament', unlocked: true },
+  { id: 'history',   title: 'History',         blurb: 'Ancient to modern India',          unlocked: false },
+  { id: 'geography', title: 'Geography',       blurb: 'India and the world',              unlocked: false },
+  { id: 'science',   title: 'General Science', blurb: 'Physics, chemistry, biology',      unlocked: false }
+];
+const POLITY_ICON = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 3L3 8v2h18V8zM5 11h2v7H5zM9 11h2v7H9zM13 11h2v7h-2zM17 11h2v7h-2zM3 19h18v2H3z" fill="currentColor"/></svg>';
+const FADE_MS = 450;
+
+const menuScreen = document.getElementById('main-menu-screen');
+const gameScreen = document.getElementById('gameplay-screen');
+const resumeBtn = document.getElementById('btn-resume');
+const resumeMeta = document.getElementById('resume-meta');
+const newBtn = document.getElementById('btn-new');
+const confirmEl = document.getElementById('confirm');
+const confirmText = document.getElementById('confirm-text');
+const confirmOk = document.getElementById('confirm-ok');
+const confirmCancel = document.getElementById('confirm-cancel');
+
+let gameStarted = false;   // the game logic (fetch, HUD, save restore) starts on the first entry only
+let transitioning = false;
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+// Fade `from` out, swap display, fade `to` in
+function swapScreens(from, to, onShown) {
+  const wait = prefersReducedMotion() ? 0 : FADE_MS;
+  from.classList.add('is-fading');
+  setTimeout(() => {
+    from.classList.add('hidden');
+    from.classList.remove('is-fading');
+    to.classList.add('is-fading');   // start transparent, so the fade-in has something to animate from
+    to.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    if (onShown) onShown();          // the screen has layout now, so it is safe to measure and draw
+    requestAnimationFrame(() => requestAnimationFrame(() => to.classList.remove('is-fading')));
+  }, wait);
+}
+
+function resetState() {
+  stopSpeaking();
+  hearts = MAX_HEARTS;
+  streak = 0;
+  xp = 0;
+  heartsEmptyAt = null;
+  lineIndex = 0;
+}
+
+function enterGameplay(fresh) {
+  if (transitioning) return;
+  transitioning = true;
+  swapScreens(menuScreen, gameScreen, () => {
+    if (fresh || !gameStarted) {
+      if (fresh) resetState();
+      gameStarted = true;
+      startGameplay();
+    }
+    gameScreen.focus({ preventScroll: true });
+    transitioning = false;
+  });
+}
+
+function showMenu() {
+  if (transitioning) return;
+  transitioning = true;
+  if (arena) closeArena();
+  stopSpeaking();
+  swapScreens(gameScreen, menuScreen, () => {
+    refreshMenu();
+    transitioning = false;
+  });
+}
+
+function saveSummary(s) {
+  const states = s.nodes && typeof s.nodes === 'object' ? Object.values(s.nodes) : [];
+  return {
+    hearts: intIn(s.hearts, 0, 99, 0),
+    streak: intIn(s.streak, 0, 1000000, 0),
+    xp: intIn(s.xp, 0, 1000000000, 0),
+    done: states.filter(v => v === 'completed').length,
+    total: states.length
+  };
+}
+
+// Resume is live only when a readable save exists; otherwise Start New becomes the main call to action
+function refreshMenu() {
+  const s = readSave();
+  resumeBtn.disabled = !s;
+  resumeBtn.classList.toggle('btn--primary', Boolean(s));
+  resumeBtn.classList.toggle('btn--off', !s);
+  newBtn.classList.toggle('btn--primary', !s);
+  newBtn.classList.toggle('btn--ghost', Boolean(s));
+
+  resumeMeta.replaceChildren();
+  if (!s) {
+    resumeMeta.textContent = 'No save found';
+    return;
+  }
+  const t = saveSummary(s);
+  [`\u2764\uFE0F ${t.hearts}`, `\u26A1 ${t.xp} XP`, `\uD83D\uDD25 ${t.streak}`, `${t.done} of ${t.total} cleared`].forEach(text => {
+    const span = document.createElement('span');
+    span.textContent = text;
+    resumeMeta.appendChild(span);
+  });
+}
+
+function renderSubjects() {
+  const wrap = document.getElementById('subjects');
+  wrap.replaceChildren();
+  SUBJECTS.forEach(sub => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'subject ' + (sub.unlocked ? 'subject--open' : 'subject--locked');
+    card.dataset.id = sub.id;
+    if (!sub.unlocked) card.setAttribute('aria-disabled', 'true');
+
+    const icon = document.createElement('span');
+    icon.className = 'subject__icon';
+    icon.innerHTML = sub.unlocked ? POLITY_ICON : ICONS.locked;
+
+    const name = document.createElement('span');
+    name.className = 'subject__name';
+    name.textContent = sub.title;
+
+    const blurb = document.createElement('span');
+    blurb.className = 'subject__blurb';
+    blurb.textContent = sub.blurb;
+
+    const status = document.createElement('span');
+    status.className = 'subject__status';
+    status.textContent = sub.unlocked ? 'Available now' : 'Locked';
+
+    card.append(icon, name, blurb, status);
+    wrap.appendChild(card);
+  });
+}
+
+/* Overwrite warning */
+function openConfirm(s) {
+  const t = saveSummary(s);
+  confirmText.textContent = `Starting over erases ${t.xp} XP, a streak of ${t.streak} and ${t.done} cleared modules. This cannot be undone.`;
+  confirmEl.classList.remove('hidden');
+  confirmCancel.focus();
+}
+function closeConfirm() {
+  confirmEl.classList.add('hidden');
+  newBtn.focus();
+}
+
+resumeBtn.addEventListener('click', () => enterGameplay(false));
+
+newBtn.addEventListener('click', () => {
+  const s = readSave();
+  if (s) openConfirm(s);
+  else enterGameplay(true);
+});
+
+confirmCancel.addEventListener('click', closeConfirm);
+confirmOk.addEventListener('click', () => {
+  try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* storage unavailable */ }
+  confirmEl.classList.add('hidden');
+  enterGameplay(true);
+});
+confirmEl.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  e.preventDefault();
+  const order = [confirmCancel, confirmOk];
+  const i = order.indexOf(document.activeElement);
+  order[(i + (e.shiftKey ? -1 : 1) + order.length) % order.length].focus();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !confirmEl.classList.contains('hidden')) closeConfirm();
+});
+
+document.getElementById('subjects').addEventListener('click', e => {
+  const card = e.target.closest('.subject');
+  if (!card) return;
+  if (card.classList.contains('subject--locked')) {
+    card.classList.remove('is-denied');
+    void card.offsetWidth;
+    card.classList.add('is-denied');
+    return;
+  }
+  enterGameplay(false);
+});
+
+document.getElementById('btn-menu').addEventListener('click', showMenu);
+
+function initMenu() {
+  renderSubjects();
+  refreshMenu();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMenu);
+else initMenu();

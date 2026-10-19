@@ -9,8 +9,50 @@
 </head>
 <body>
 
+  <!-- ============ MAIN MENU ============ -->
+  <div id="main-menu-screen">
+    <div class="menu__bg" aria-hidden="true"><div class="menu__grid"></div></div>
+
+    <div class="menu__inner">
+      <header class="menu__hero">
+        <h1 class="menu__title">KANTHASTH</h1>
+        <p class="menu__sub">The Strict SSC CGL AI Mentor</p>
+      </header>
+
+      <nav class="menu__actions" aria-label="Main menu">
+        <button class="btn btn--off" id="btn-resume" type="button" disabled>
+          <span class="btn__label">Resume Journey</span>
+          <span class="btn__meta" id="resume-meta">No save found</span>
+        </button>
+        <button class="btn btn--primary" id="btn-new" type="button">
+          <span class="btn__label">Start New Journey</span>
+        </button>
+      </nav>
+
+      <section class="menu__subjects" aria-labelledby="subjects-title">
+        <h2 class="menu__h2" id="subjects-title">Choose your subject</h2>
+        <div class="subjects" id="subjects"></div>
+      </section>
+    </div>
+
+    <div class="confirm hidden" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+      <div class="confirm__card">
+        <h2 class="confirm__title" id="confirm-title">Erase your progress?</h2>
+        <p class="confirm__text" id="confirm-text"></p>
+        <div class="confirm__actions">
+          <button class="btn btn--ghost" id="confirm-cancel" type="button">Keep my save</button>
+          <button class="btn btn--danger" id="confirm-ok" type="button">Erase and start over</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAMEPLAY ============ -->
+  <div id="gameplay-screen" class="hidden" tabindex="-1">
+
   <header class="top">
     <h1 class="top__title">Polity</h1>
+    <button class="top__menu" id="btn-menu" type="button">Menu</button>
     <p class="top__sub" id="progress-text">0 of 0 modules cleared</p>
     <div class="top__bar" role="progressbar" aria-label="Polity progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar">
       <span class="top__fill" id="progress-fill"></span>
@@ -34,6 +76,11 @@
       <p class="arena__count" id="arena-count"></p>
       <p class="arena__q" id="arena-question"></p>
       <div class="arena__options" id="arena-options"></div>
+      <section class="explain" id="arena-explain" hidden aria-live="polite">
+        <p class="explain__verdict" id="explain-verdict"></p>
+        <p class="explain__text" id="explain-text"></p>
+        <button class="btn btn--primary arena__continue" id="arena-continue" type="button">Continue</button>
+      </section>
     </div>
   </div>
 
@@ -69,6 +116,8 @@
       </div>
     </div>
   </aside>
+
+  </div><!-- /gameplay-screen -->
 
   <script src="app.js"></script>
 </body>
