@@ -5,103 +5,588 @@
   "settings": {
     "maxHearts": 5,
     "xpPerCorrect": 50,
-    "questionsPerRun": 1
+    "questionsPerRun": 2,
+    "xpPerLevel": 500
   },
   "nodes": [
-    { "id": "polity_basics",      "title": "Polity Basics",      "state": "completed", "x": 50, "y": 0, "parents": [],                                "deck": "polity_mod1" },
-    { "id": "preamble",           "title": "Preamble",           "state": "completed", "x": 75, "y": 1, "parents": ["polity_basics"],                 "deck": "polity_mod2" },
-    { "id": "fundamental_rights", "title": "Fundamental Rights", "state": "unlocked",  "x": 25, "y": 1, "parents": ["polity_basics"],                 "deck": "polity_mod3" },
-    { "id": "dpsp",               "title": "DPSP",               "state": "locked",    "x": 25, "y": 2, "parents": ["fundamental_rights"],            "deck": "polity_mod4" },
-    { "id": "union_executive",    "title": "Union Executive",    "state": "unlocked",  "x": 75, "y": 2, "parents": ["preamble"],                      "deck": "polity_mod5" },
-    { "id": "parliament",         "title": "Parliament",         "state": "locked",    "x": 50, "y": 3, "parents": ["dpsp", "union_executive"],       "deck": "polity_mod6" },
-    { "id": "judiciary",          "title": "Judiciary",          "state": "locked",    "x": 25, "y": 4, "parents": ["parliament"],                    "deck": "polity_mod7" },
-    { "id": "federalism",         "title": "Federal Structure", "state": "locked",    "x": 75, "y": 4, "parents": ["parliament"],                    "deck": "polity_mod8" },
-    { "id": "polity_boss",        "title": "Polity Boss Test",   "state": "locked",    "x": 50, "y": 5, "parents": ["judiciary", "federalism"],       "deck": "polity_boss" }
+    {
+      "id": "polity_basics",
+      "title": "Polity Basics",
+      "state": "completed",
+      "x": 50,
+      "y": 0,
+      "parents": [],
+      "deck": "polity_mod1"
+    },
+    {
+      "id": "preamble",
+      "title": "Preamble",
+      "state": "completed",
+      "x": 75,
+      "y": 1,
+      "parents": [
+        "polity_basics"
+      ],
+      "deck": "polity_mod2"
+    },
+    {
+      "id": "fundamental_rights",
+      "title": "Fundamental Rights",
+      "state": "unlocked",
+      "x": 25,
+      "y": 1,
+      "parents": [
+        "polity_basics"
+      ],
+      "deck": "polity_mod3"
+    },
+    {
+      "id": "dpsp",
+      "title": "DPSP",
+      "state": "locked",
+      "x": 25,
+      "y": 2,
+      "parents": [
+        "fundamental_rights"
+      ],
+      "deck": "polity_mod4"
+    },
+    {
+      "id": "union_executive",
+      "title": "Union Executive",
+      "state": "unlocked",
+      "x": 75,
+      "y": 2,
+      "parents": [
+        "preamble"
+      ],
+      "deck": "polity_mod5"
+    },
+    {
+      "id": "parliament",
+      "title": "Parliament",
+      "state": "locked",
+      "x": 50,
+      "y": 3,
+      "parents": [
+        "dpsp",
+        "union_executive"
+      ],
+      "deck": "polity_mod6"
+    },
+    {
+      "id": "judiciary",
+      "title": "Judiciary",
+      "state": "locked",
+      "x": 25,
+      "y": 4,
+      "parents": [
+        "parliament"
+      ],
+      "deck": "polity_mod7"
+    },
+    {
+      "id": "federalism",
+      "title": "Federal Structure",
+      "state": "locked",
+      "x": 75,
+      "y": 4,
+      "parents": [
+        "parliament"
+      ],
+      "deck": "polity_mod8"
+    },
+    {
+      "id": "polity_boss",
+      "title": "Polity Boss Test",
+      "state": "locked",
+      "x": 50,
+      "y": 5,
+      "parents": [
+        "judiciary",
+        "federalism"
+      ],
+      "deck": "polity_boss",
+      "type": "boss"
+    }
   ],
   "modules": {
     "fundamental_rights": {
       "questions": [
         {
+          "questionType": "mcq",
           "question": "Which Article of the Constitution of India guarantees the Right to Life and Personal Liberty?",
-          "options": ["Article 19", "Article 20", "Article 21", "Article 22"],
+          "options": [
+            "Article 19",
+            "Article 20",
+            "Article 21",
+            "Article 22"
+          ],
           "correctAnswer": "Article 21",
           "mentorScolding": "Focus! Article 21 is life and liberty. You just lost a heart and your streak. Try again!",
           "explanation": "Article 21 protects life and personal liberty, and nobody can be deprived of them except by a procedure established by law. The courts have read privacy, dignity and speedy trial into it. Article 19 holds the freedoms, Article 20 protects against unfair conviction, and Article 22 covers arrest and detention."
         },
         {
+          "questionType": "mcq",
           "question": "The Right to Education was made a Fundamental Right (Article 21A) by which Constitutional Amendment?",
-          "options": ["42nd Amendment", "44th Amendment", "86th Amendment", "93rd Amendment"],
+          "options": [
+            "42nd Amendment",
+            "44th Amendment",
+            "86th Amendment",
+            "93rd Amendment"
+          ],
           "correctAnswer": "86th Amendment",
           "mentorScolding": "Sloppy. The 86th Amendment gave us Article 21A. Dates and numbers win this exam. You lost a heart. Recover.",
           "explanation": "The 86th Amendment Act, 2002 inserted Article 21A, making free and compulsory education a Fundamental Right for children aged 6 to 14. The Right to Education Act, 2009 brought it into force on 1 April 2010. The 42nd Amendment added Fundamental Duties, and the 44th removed the right to property from Part III."
         },
         {
+          "questionType": "mcq",
           "question": "Who described Article 32, the Right to Constitutional Remedies, as the heart and soul of the Constitution?",
-          "options": ["Jawaharlal Nehru", "Dr. B. R. Ambedkar", "Rajendra Prasad", "Sardar Patel"],
+          "options": [
+            "Jawaharlal Nehru",
+            "Dr. B. R. Ambedkar",
+            "Rajendra Prasad",
+            "Sardar Patel"
+          ],
           "correctAnswer": "Dr. B. R. Ambedkar",
           "mentorScolding": "Unacceptable. Ambedkar called Article 32 the heart and soul. This is a one-mark gift and you dropped it. Streak gone. Rebuild.",
           "explanation": "Dr. B. R. Ambedkar called Article 32 the heart and soul of the Constitution. It lets a citizen go straight to the Supreme Court to enforce a Fundamental Right, through the writs of habeas corpus, mandamus, prohibition, certiorari and quo warranto."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each Article with the right it guarantees.",
+          "pairs": [
+            {
+              "left": "Article 14",
+              "right": "Equality before law"
+            },
+            {
+              "left": "Article 17",
+              "right": "Abolition of untouchability"
+            },
+            {
+              "left": "Article 19",
+              "right": "Freedom of speech and expression"
+            },
+            {
+              "left": "Article 21",
+              "right": "Protection of life and personal liberty"
+            }
+          ],
+          "mentorScolding": "Careless. Articles 14, 17, 19 and 21 are the backbone of Part III. If you mix them up, you are not ready. A heart is gone.",
+          "explanation": "Article 14 gives equality before law, Article 17 abolishes untouchability, Article 19(1)(a) protects freedom of speech and expression, and Article 21 protects life and personal liberty. These four are asked in almost every cycle."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "Article ___ abolishes untouchability.",
+          "answer": "17",
+          "acceptedAnswers": [
+            "Article 17",
+            "Art 17"
+          ],
+          "hint": "The Right to Equality runs from Article 14 to Article 18.",
+          "mentorScolding": "Seventeen. Article 17 abolishes untouchability and forbids its practice in any form. You should have typed it before reading the sentence twice. Streak gone.",
+          "explanation": "Article 17 abolishes untouchability. The Protection of Civil Rights Act, 1955 gives it teeth. It sits under the Right to Equality, Articles 14 to 18."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The Right to Property was removed from Part III by the ___ Amendment.",
+          "answer": "44th",
+          "acceptedAnswers": [
+            "44",
+            "44th Amendment",
+            "forty fourth",
+            "forty-fourth"
+          ],
+          "hint": "It came in 1978, after the Emergency.",
+          "mentorScolding": "The 44th Amendment. Property stopped being a Fundamental Right in 1978. Know your amendments or lose marks. Heart gone.",
+          "explanation": "The 44th Amendment Act, 1978 removed the right to property from Part III. It became a legal right under Article 300A."
         }
       ]
     },
     "union_executive": {
       "questions": [
         {
+          "questionType": "mcq",
           "question": "Who appoints the Prime Minister of India?",
-          "options": ["The President", "The Speaker of Lok Sabha", "The Chief Justice of India", "The Vice President"],
+          "options": [
+            "The President",
+            "The Speaker of Lok Sabha",
+            "The Chief Justice of India",
+            "The Vice President"
+          ],
           "correctAnswer": "The President",
           "mentorScolding": "Wrong. The President appoints the Prime Minister. Basic structure, basic marks. Heart lost. Do not repeat this.",
           "explanation": "Under Article 75(1) the President appoints the Prime Minister, in practice the leader of the party or coalition that commands a majority in the Lok Sabha. The other ministers are appointed on the Prime Minister's advice."
         },
         {
+          "questionType": "mcq",
           "question": "Which Article vests the executive power of the Union in the President?",
-          "options": ["Article 52", "Article 53", "Article 74", "Article 75"],
+          "options": [
+            "Article 52",
+            "Article 53",
+            "Article 74",
+            "Article 75"
+          ],
           "correctAnswer": "Article 53",
           "mentorScolding": "Careless. Article 53 is the executive power of the Union. Article 52 only says there shall be a President. Read the wording. Streak broken.",
           "explanation": "Article 53 vests the executive power of the Union in the President, to be used directly or through officers under him. Article 52 only says there shall be a President, Article 74 creates the Council of Ministers to aid and advise him, and Article 75 deals with the ministers."
         },
         {
+          "questionType": "mcq",
           "question": "What is the minimum age to be eligible for election as President of India?",
-          "options": ["25 years", "30 years", "35 years", "40 years"],
+          "options": [
+            "25 years",
+            "30 years",
+            "35 years",
+            "40 years"
+          ],
           "correctAnswer": "35 years",
           "mentorScolding": "No. Thirty-five years for the President. Eligibility numbers repeat every year in this exam. Lock it in.",
           "explanation": "A candidate for President must be an Indian citizen, at least 35 years old, and qualified to be elected to the Lok Sabha (Article 58). The Vice President also has to be at least 35."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each Article with its subject.",
+          "pairs": [
+            {
+              "left": "Article 52",
+              "right": "There shall be a President of India"
+            },
+            {
+              "left": "Article 53",
+              "right": "Executive power of the Union"
+            },
+            {
+              "left": "Article 74",
+              "right": "Council of Ministers to aid and advise"
+            },
+            {
+              "left": "Article 76",
+              "right": "Attorney General of India"
+            }
+          ],
+          "mentorScolding": "Wrong pairing. Articles 52, 53, 74 and 76 are all basic Union Executive. Study them as one set. Heart lost.",
+          "explanation": "Article 52 says there shall be a President, Article 53 vests the executive power in him, Article 74 creates the Council of Ministers to aid and advise him, and Article 76 provides for the Attorney General."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The President of India is elected for a term of ___ years.",
+          "answer": "5",
+          "acceptedAnswers": [
+            "five",
+            "5 years",
+            "five years"
+          ],
+          "mentorScolding": "Five years. Article 56. The President serves five years and may stand for re-election. Sloppy. Streak reset.",
+          "explanation": "Article 56 gives the President a five-year term, counted from the day he enters office. He continues until his successor takes charge."
         }
       ]
     },
     "dpsp": {
       "questions": [
         {
+          "questionType": "mcq",
           "question": "The Directive Principles of State Policy are contained in which Part of the Constitution?",
-          "options": ["Part III", "Part IV", "Part IV-A", "Part V"],
+          "options": [
+            "Part III",
+            "Part IV",
+            "Part IV-A",
+            "Part V"
+          ],
           "correctAnswer": "Part IV",
           "mentorScolding": "Part IV. Part III is Fundamental Rights. Mixing them up costs marks every single year. Heart gone. Focus.",
           "explanation": "The Directive Principles are in Part IV, Articles 36 to 51. They guide the State but cannot be enforced in court, and the idea comes from the Irish Constitution. Part III is Fundamental Rights and Part IV-A is Fundamental Duties."
         },
         {
+          "questionType": "mcq",
           "question": "Which Article directs the State to secure a Uniform Civil Code for citizens?",
-          "options": ["Article 40", "Article 44", "Article 48", "Article 51"],
+          "options": [
+            "Article 40",
+            "Article 44",
+            "Article 48",
+            "Article 51"
+          ],
           "correctAnswer": "Article 44",
           "mentorScolding": "Article 44. Uniform Civil Code. You have seen this question before and still missed it. That is a discipline problem. Try again.",
           "explanation": "Article 44 asks the State to endeavour to secure a Uniform Civil Code for all citizens. Article 40 is about village panchayats, Article 48 about agriculture and animal husbandry, and Article 51 about international peace and security."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each Article of Part IV with its directive.",
+          "pairs": [
+            {
+              "left": "Article 40",
+              "right": "Organisation of village panchayats"
+            },
+            {
+              "left": "Article 44",
+              "right": "Uniform Civil Code"
+            },
+            {
+              "left": "Article 48",
+              "right": "Agriculture and animal husbandry"
+            },
+            {
+              "left": "Article 50",
+              "right": "Separation of judiciary from executive"
+            }
+          ],
+          "mentorScolding": "Not good enough. Part IV Articles come in the exam as pairs like this. Learn the set. You lost a heart.",
+          "explanation": "Article 40 asks the State to organise village panchayats, Article 44 aims at a Uniform Civil Code, Article 48 covers agriculture and animal husbandry, and Article 50 separates the judiciary from the executive."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The Directive Principles of State Policy were borrowed from the ___ Constitution.",
+          "answer": "Irish",
+          "acceptedAnswers": [
+            "Ireland",
+            "Irish constitution"
+          ],
+          "mentorScolding": "Irish. The idea of Directive Principles comes from Ireland. Sources of the Constitution are easy marks. You threw this one away.",
+          "explanation": "The Directive Principles come from the Irish Constitution. Fundamental Rights draw on the US Bill of Rights, and the parliamentary system on Britain."
         }
       ]
     },
     "parliament": {
       "questions": [
         {
+          "questionType": "mcq",
           "question": "Who presides over a joint sitting of both Houses of Parliament?",
-          "options": ["The President", "The Vice President", "The Speaker of Lok Sabha", "The Chairman of Rajya Sabha"],
+          "options": [
+            "The President",
+            "The Vice President",
+            "The Speaker of Lok Sabha",
+            "The Chairman of Rajya Sabha"
+          ],
           "correctAnswer": "The Speaker of Lok Sabha",
           "mentorScolding": "The Speaker of Lok Sabha presides over the joint sitting. Know who holds the chair. Heart lost. Streak reset.",
           "explanation": "Under Article 108 the President summons a joint sitting to settle a deadlock over an ordinary Bill, and the Speaker of the Lok Sabha presides over it. Joint sittings are rare. The standard examples are the Dowry Prohibition Bill 1961, the Banking Service Commission Repeal Bill 1978 and the POTA Bill 2002."
         },
         {
+          "questionType": "mcq",
           "question": "What is the maximum permissible gap between two sessions of Parliament?",
-          "options": ["Three months", "Four months", "Six months", "Twelve months"],
+          "options": [
+            "Three months",
+            "Four months",
+            "Six months",
+            "Twelve months"
+          ],
           "correctAnswer": "Six months",
           "mentorScolding": "Six months. Not a day more between sessions. Vague memory is not preparation. Sharpen up.",
           "explanation": "Article 85 says that six months must not pass between the last sitting of one session and the first sitting of the next. That is why Parliament has to meet at least twice a year."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each Article with what it deals with.",
+          "pairs": [
+            {
+              "left": "Article 108",
+              "right": "Joint sitting of both Houses"
+            },
+            {
+              "left": "Article 110",
+              "right": "Definition of a Money Bill"
+            },
+            {
+              "left": "Article 112",
+              "right": "Annual Financial Statement (Budget)"
+            },
+            {
+              "left": "Article 123",
+              "right": "Ordinance-making power of the President"
+            }
+          ],
+          "mentorScolding": "Wrong. These four Articles define how laws and money move through Parliament. Your pairing was careless. Heart gone.",
+          "explanation": "Article 108 provides for a joint sitting, Article 110 defines a Money Bill, Article 112 requires the Annual Financial Statement, and Article 123 lets the President issue ordinances when Parliament is not in session."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The Rajya Sabha has a maximum strength of ___ members.",
+          "answer": "250",
+          "acceptedAnswers": [
+            "250 members",
+            "two hundred fifty"
+          ],
+          "mentorScolding": "Two hundred and fifty. Article 80: up to 238 elected and 12 nominated. Numbers like this are free marks. You lost a heart.",
+          "explanation": "Article 80 sets the maximum strength of the Rajya Sabha at 250: up to 238 representatives of States and Union Territories, and 12 nominated members."
+        }
+      ]
+    },
+    "judiciary": {
+      "questions": [
+        {
+          "questionType": "mcq",
+          "question": "What is the retirement age of a Supreme Court judge?",
+          "options": [
+            "60 years",
+            "62 years",
+            "65 years",
+            "67 years"
+          ],
+          "correctAnswer": "65 years",
+          "mentorScolding": "Sixty-five. Supreme Court judges retire at 65. High Court judges retire at 62. Mix them up and you lose the mark. Heart gone.",
+          "explanation": "Under Article 124(2) a Supreme Court judge holds office until 65. A High Court judge retires at 62 under Article 217."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "A High Court judge retires at the age of ___.",
+          "answer": "62",
+          "acceptedAnswers": [
+            "62 years",
+            "sixty two",
+            "sixty-two"
+          ],
+          "mentorScolding": "Sixty-two. High Court judges retire at 62, Supreme Court judges at 65. Know the difference. Streak reset.",
+          "explanation": "Under Article 217 a High Court judge holds office until the age of 62. For a Supreme Court judge the age is 65 under Article 124."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each writ with its meaning.",
+          "pairs": [
+            {
+              "left": "Habeas Corpus",
+              "right": "Produce the detained person before the court"
+            },
+            {
+              "left": "Mandamus",
+              "right": "Command a public official to do their duty"
+            },
+            {
+              "left": "Certiorari",
+              "right": "Quash an order of a lower court"
+            },
+            {
+              "left": "Quo Warranto",
+              "right": "Question by what authority one holds public office"
+            }
+          ],
+          "mentorScolding": "Writs are guaranteed marks and you dropped them. Habeas corpus, mandamus, certiorari, quo warranto. Learn the meanings. Heart gone.",
+          "explanation": "Habeas corpus means \"you may have the body\", and it frees a person from illegal detention. Mandamus commands a public official to perform a duty. Certiorari quashes an order of a lower court. Quo warranto challenges a person’s right to hold a public office."
+        }
+      ]
+    },
+    "federalism": {
+      "questions": [
+        {
+          "questionType": "mcq",
+          "question": "Which Schedule of the Constitution contains the Union, State and Concurrent Lists?",
+          "options": [
+            "Sixth Schedule",
+            "Seventh Schedule",
+            "Eighth Schedule",
+            "Ninth Schedule"
+          ],
+          "correctAnswer": "Seventh Schedule",
+          "mentorScolding": "Seventh Schedule. Union, State and Concurrent Lists. This is the core of federalism and you missed it. Heart lost.",
+          "explanation": "The Seventh Schedule divides powers between the Union and the States through three lists: Union, State and Concurrent. Residuary powers rest with the Union."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The ___ Amendment introduced Panchayati Raj institutions as constitutional bodies.",
+          "answer": "73rd",
+          "acceptedAnswers": [
+            "73",
+            "73rd amendment",
+            "seventy third",
+            "seventy-third"
+          ],
+          "mentorScolding": "The 73rd. Panchayats. The 74th is municipalities. Do not blur them. Streak gone.",
+          "explanation": "The 73rd Amendment Act, 1992 added Part IX and the Eleventh Schedule on Panchayats. The 74th Amendment covers Municipalities through Part IX-A and the Twelfth Schedule."
+        },
+        {
+          "questionType": "match",
+          "question": "Match each Schedule with its subject.",
+          "pairs": [
+            {
+              "left": "Seventh Schedule",
+              "right": "Union, State and Concurrent Lists"
+            },
+            {
+              "left": "Eighth Schedule",
+              "right": "Recognised languages"
+            },
+            {
+              "left": "Tenth Schedule",
+              "right": "Anti-defection law"
+            },
+            {
+              "left": "Twelfth Schedule",
+              "right": "Powers of Municipalities"
+            }
+          ],
+          "mentorScolding": "Wrong. The Schedules are a standard question and you are guessing. Learn the key four. A heart is gone.",
+          "explanation": "The Seventh Schedule holds the three legislative lists, the Eighth lists the recognised languages, the Tenth carries the anti-defection law, and the Twelfth lists the functions of Municipalities."
+        }
+      ]
+    },
+    "polity_boss": {
+      "questionType": "bossFight",
+      "timeLimit": 60,
+      "requiredCorrect": 4,
+      "bonusXp": 200,
+      "unlocksSubject": "history",
+      "questions": [
+        {
+          "questionType": "mcq",
+          "question": "Which Article empowers the Supreme Court to issue writs to enforce Fundamental Rights?",
+          "options": [
+            "Article 21",
+            "Article 32",
+            "Article 226",
+            "Article 368"
+          ],
+          "correctAnswer": "Article 32",
+          "mentorScolding": "Article 32. Article 226 is the High Court. Under pressure you guessed. Heart lost.",
+          "explanation": "Article 32 lets a person approach the Supreme Court directly to enforce Fundamental Rights. Article 226 gives High Courts a wider writ power."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "Article ___ directs the State to secure a Uniform Civil Code.",
+          "answer": "44",
+          "acceptedAnswers": [
+            "Article 44"
+          ],
+          "mentorScolding": "Forty-four. Uniform Civil Code. You knew this earlier. Pressure exposes weak memory.",
+          "explanation": "Article 44, in Part IV, directs the State to endeavour to secure a Uniform Civil Code for all citizens."
+        },
+        {
+          "questionType": "mcq",
+          "question": "Who is the ex officio Chairman of the Rajya Sabha?",
+          "options": [
+            "The President",
+            "The Vice President",
+            "The Prime Minister",
+            "The Speaker"
+          ],
+          "correctAnswer": "The Vice President",
+          "mentorScolding": "The Vice President chairs the Rajya Sabha. This is basic. Heart gone.",
+          "explanation": "Under Article 89 the Vice President of India is the ex officio Chairman of the Rajya Sabha."
+        },
+        {
+          "questionType": "mcq",
+          "question": "How many Schedules does the Constitution of India currently have?",
+          "options": [
+            "8",
+            "10",
+            "12",
+            "14"
+          ],
+          "correctAnswer": "12",
+          "mentorScolding": "Twelve Schedules. It began with eight. Count properly. Heart lost.",
+          "explanation": "The Constitution began with 8 Schedules and now has 12, after the Ninth, Tenth, Eleventh and Twelfth were added by amendments."
+        },
+        {
+          "questionType": "fillBlank",
+          "question": "The minimum age to become President of India is ___ years.",
+          "answer": "35",
+          "acceptedAnswers": [
+            "35 years",
+            "thirty five",
+            "thirty-five"
+          ],
+          "mentorScolding": "Thirty-five. Presidential eligibility is a standard question. You lost a heart.",
+          "explanation": "Under Article 58 a candidate for President must be at least 35 years old, a citizen of India and qualified to be a member of the Lok Sabha."
         }
       ]
     }

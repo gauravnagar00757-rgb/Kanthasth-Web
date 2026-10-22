@@ -807,3 +807,196 @@ body.arena-open { overflow: hidden; }
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
+
+/* ======================================================================
+   PHASE 8: QUESTION FORMATS, BOSS FIGHT, LEVELS
+   ====================================================================== */
+
+/* ---------- Levels ---------- */
+.dash__top { flex-wrap: wrap; }
+.lvl-row { flex: 0 0 100%; display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.lvl-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 99px;
+  background: linear-gradient(120deg, var(--cyan), var(--violet));
+  color: #06101E;
+  font-size: 0.8rem;
+  font-weight: 800;
+  box-shadow: 0 0 14px rgba(34, 228, 255, 0.45);
+}
+.lvl-bar {
+  position: relative;
+  flex: 1;
+  height: 18px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.lvl-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, var(--cyan), var(--violet));
+  box-shadow: 0 0 12px rgba(34, 228, 255, 0.6);
+  transition: width 0.7s ease;
+}
+.lvl-bar__text { position: relative; display: block; text-align: center; font-size: 0.68rem; font-weight: 800; line-height: 16px; }
+.pill--hearts { padding: 4px 10px; font-size: 0.82rem; color: #FF7C93; }
+
+.mentor__hud { gap: 10px; }
+.stat--level {
+  padding: 2px 8px;
+  border-radius: 99px;
+  color: #06101E;
+  background: linear-gradient(120deg, var(--cyan), var(--violet));
+  font-size: 0.8rem;
+}
+
+.toast {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 70;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(145deg, rgba(34, 228, 255, 0.25), rgba(124, 92, 255, 0.25)), rgba(14, 18, 32, 0.92);
+  border: 1px solid rgba(34, 228, 255, 0.7);
+  box-shadow: 0 0 36px rgba(34, 228, 255, 0.55);
+  pointer-events: none;
+}
+.toast[hidden] { display: none; }
+.toast.is-in { animation: toast-in 0.45s cubic-bezier(0.2, 1.2, 0.3, 1) both; }
+.toast__title { display: block; font-size: 1.3rem; font-weight: 800; color: var(--cyan); }
+.toast__text { display: block; margin-top: 2px; font-size: 0.85rem; color: #C9D1EE; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, -24px) scale(0.9); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* ---------- Arena: format chip + boss timer ---------- */
+.arena__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0 6px; }
+.arena__meta .arena__count { margin: 0; }
+.arena__type {
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--cyan);
+  background: rgba(34, 228, 255, 0.12);
+  border: 1px solid rgba(34, 228, 255, 0.4);
+}
+.arena[data-type="bossFight"] .arena__card { border-color: rgba(255, 77, 109, 0.6); box-shadow: 0 0 0 1px rgba(255, 77, 109, 0.25), 0 0 50px rgba(255, 77, 109, 0.25), 0 20px 60px rgba(0, 0, 0, 0.6); }
+.arena[data-type="bossFight"] .arena__title { color: #FF8FA3; }
+.arena[data-type="bossFight"] .arena__type { color: #FF8FA3; background: rgba(255, 77, 109, 0.14); border-color: rgba(255, 77, 109, 0.5); }
+
+.timer { display: flex; align-items: center; gap: 10px; margin: 4px 0 6px; }
+.timer[hidden] { display: none; }
+.timer__bar { flex: 1; height: 10px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.timer__bar span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #FFB547, var(--red)); box-shadow: 0 0 12px rgba(255, 77, 109, 0.6); }
+.timer__text { min-width: 3ch; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.timer.is-low .timer__text { color: var(--red); animation: low-pulse 0.6s ease-in-out infinite; }
+@keyframes low-pulse { 50% { opacity: 0.4; } }
+
+/* ---------- Match the pairs ---------- */
+.arena__options--match { grid-template-columns: 1fr 1fr; align-items: start; }
+.match__col { display: grid; gap: 10px; }
+.tile {
+  min-height: 66px;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  background: var(--surface-2);
+  border: 1.5px solid var(--edge);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.tile:hover:not(:disabled) { border-color: var(--cyan); }
+.tile.is-selected { border-color: var(--cyan); background: #1D2850; box-shadow: 0 0 16px rgba(34, 228, 255, 0.5); transform: scale(1.03); }
+.tile.is-matched {
+  opacity: 1;
+  border-color: var(--pc, #39FF88);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 14px var(--pc, #39FF88);
+  cursor: default;
+}
+.tile.is-wrong { opacity: 1; color: #fff; background: #E5173F; border-color: var(--red); box-shadow: 0 0 20px rgba(255, 77, 109, 0.7); }
+.tile:disabled:not(.is-matched):not(.is-wrong) { opacity: 0.5; cursor: default; }
+
+/* ---------- Fill in the blank ---------- */
+.fill { display: grid; gap: 12px; }
+.fill__input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--edge);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.fill__input::placeholder { color: #5C6690; font-weight: 600; }
+.fill__input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 16px rgba(34, 228, 255, 0.4); }
+.fill__input.is-correct { border-color: #39FF88; box-shadow: 0 0 18px rgba(57, 255, 136, 0.6); }
+.fill__input.is-wrong { border-color: var(--red); box-shadow: 0 0 18px rgba(255, 77, 109, 0.6); }
+.fill__input.is-empty { animation: subject-deny 0.3s ease; }
+.fill__input:disabled { opacity: 1; }
+.fill__submit { animation: none; }
+.fill__hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+/* ---------- Review list (match answers, boss results) ---------- */
+.explain__list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.explain__list li {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--edge);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #C9D1EE;
+}
+.explain__list li.is-ok { border-left-color: #39FF88; }
+.explain__list li.is-bad { border-left-color: var(--red); }
+.explain__list b { margin-right: 2px; color: var(--text); }
+
+/* ---------- Boss node on the tree ---------- */
+.node--boss .node__label { color: #FF8FA3; }
+.node--boss.node--unlocked { animation: pulse-boss 1.4s ease-in-out infinite; }
+.node--boss.node--unlocked .node__shape { background: linear-gradient(160deg, #FF4D6D, #B1005F); }
+.node--boss.node--unlocked .node__shape::before { background: linear-gradient(160deg, #3A0F24, #240A1A); }
+.node--boss.node--unlocked .node__shape svg { color: #FF4D6D; }
+@keyframes pulse-boss {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 77, 109, 0.55)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(255, 0, 110, 0.95)); }
+}
+
+/* keep greeting and stat pills on one row; level row sits underneath */
+.dash__who { flex: 1 1 0; min-width: 0; }
+.dash__welcome { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash__stats { gap: 6px; }
+.dash__stats .pill { padding: 6px 10px; font-size: 0.85rem; }
+.dash__top { padding-bottom: 12px; row-gap: 8px; }
+
+/* ======================================================================
+   PWA: behave like a native app when installed
+   ====================================================================== */
+html { overscroll-behavior-y: none; -webkit-text-size-adjust: 100%; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input { -webkit-user-select: text; user-select: text; }
+
+/* With the translucent iOS status bar the page runs under it: the sticky header absorbs the notch */
+.dash__top {
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+}

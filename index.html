@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0E1220">
+  <meta name="description" content="Kanthasth: a gamified SSC CGL game with a strict AI mentor.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+  <!-- iOS: full-screen app when added to the Home Screen -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kanthasth">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>Kanthasth</title>
   <link rel="stylesheet" href="style.css">
-  
-  <!-- PWA Manifest and Icons -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
 
@@ -27,6 +36,14 @@
       <div class="dash__stats">
         <span class="pill pill--streak" id="dash-streak" aria-label="Streak">&#128293; 0</span>
         <span class="pill pill--xp" id="dash-xp" aria-label="Total XP">&#9889; 0</span>
+      </div>
+      <div class="lvl-row">
+        <span class="lvl-badge" id="dash-level">Lv 1</span>
+        <div class="lvl-bar" id="dash-level-bar" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="lvl-bar__fill" id="dash-level-fill"></span>
+          <span class="lvl-bar__text" id="dash-level-text">0 / 500 XP</span>
+        </div>
+        <span class="pill pill--hearts" id="dash-hearts" aria-label="Hearts">&#10084;&#65039; 5</span>
       </div>
     </header>
 
@@ -115,6 +132,12 @@
     </div>
   </div>
 
+  <!-- Level-up toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast__title" id="toast-title"></span>
+    <span class="toast__text" id="toast-text"></span>
+  </div>
+
   <!-- ============ GAMEPLAY ============ -->
   <div id="gameplay-screen" class="hidden" tabindex="-1">
 
@@ -144,12 +167,20 @@
         <button class="arena__voice" id="arena-voice" type="button" aria-pressed="true">&#128266; Voice on</button>
         <button class="arena__close" id="arena-close" type="button" aria-label="Leave arena">&#10005;</button>
       </div>
-      <p class="arena__count" id="arena-count"></p>
+      <div class="arena__meta">
+        <p class="arena__count" id="arena-count"></p>
+        <span class="arena__type" id="arena-type"></span>
+      </div>
+      <div class="timer" id="arena-timer" hidden>
+        <div class="timer__bar"><span id="timer-fill"></span></div>
+        <span class="timer__text" id="timer-text">60s</span>
+      </div>
       <p class="arena__q" id="arena-question"></p>
       <div class="arena__options" id="arena-options"></div>
       <section class="explain" id="arena-explain" hidden aria-live="polite">
         <p class="explain__verdict" id="explain-verdict"></p>
         <p class="explain__text" id="explain-text"></p>
+        <ul class="explain__list" id="explain-list" hidden></ul>
         <button class="btn btn--primary arena__continue" id="arena-continue" type="button">Continue</button>
       </section>
     </div>
@@ -160,6 +191,7 @@
       <div class="stat" id="stat-hearts" aria-label="Hearts"></div>
       <div class="stat" id="stat-streak" aria-label="Streak"></div>
       <div class="stat" id="stat-xp" aria-label="Experience points"></div>
+      <div class="stat" id="stat-level" aria-label="Level"></div>
       <button class="mentor__toggle" id="mentor-toggle" type="button" aria-expanded="true" aria-controls="mentor-body" aria-label="Collapse mentor">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -191,14 +223,13 @@
   </div><!-- /gameplay-screen -->
 
   <script src="app.js"></script>
-  
-  <!-- PWA Service Worker Registration -->
   <script>
+    // Offline support: cache the game files so it opens instantly and works without a network
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('Service Worker Registered!', reg))
-          .catch(err => console.log('Service Worker Failed!', err));
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.warn('[Kanthasth] Service worker not registered:', err);
+        });
       });
     }
   </script>
