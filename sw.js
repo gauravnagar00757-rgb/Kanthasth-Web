@@ -1,6 +1,6 @@
 /* Kanthasth service worker.
    Bump VERSION whenever you ship new files, so old caches are dropped. */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'kanthasth-' + VERSION;
 
 const PRECACHE = [
@@ -10,6 +10,8 @@ const PRECACHE = [
   'app.js',
   'data/polity.json',
   'manifest.json',
+  'images/fundamental-rights.svg',
+  'images/union-executive.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',

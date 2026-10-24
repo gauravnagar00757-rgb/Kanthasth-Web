@@ -1000,3 +1000,84 @@ input { -webkit-user-select: text; user-select: text; }
   margin-top: calc(-1 * env(safe-area-inset-top, 0px));
   padding-top: calc(16px + env(safe-area-inset-top, 0px));
 }
+
+/* ======================================================================
+   PHASE 9: IMAGES, TRUE/FALSE, SLIDES, CALM MENTOR
+   ====================================================================== */
+
+/* ---------- Images above the question ---------- */
+.arena__figure {
+  margin: 0 0 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--edge);
+}
+.arena__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 42vh;
+  object-fit: contain;
+}
+
+/* ---------- True / False: two big buttons ---------- */
+.arena__options--trueFalse { grid-template-columns: 1fr 1fr; gap: 12px; }
+.tf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 150px;
+  padding: 18px 10px;
+  border-radius: 22px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+.tf__icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; }
+.tf__label { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.01em; }
+
+.tf--true {
+  color: #7CFFC1;
+  background: linear-gradient(160deg, rgba(57, 255, 136, 0.16), rgba(34, 228, 255, 0.08));
+  border-color: rgba(57, 255, 136, 0.45);
+}
+.tf--true .tf__icon { background: rgba(57, 255, 136, 0.18); }
+.tf--false {
+  color: #FFB0C4;
+  background: linear-gradient(160deg, rgba(255, 77, 109, 0.16), rgba(124, 92, 255, 0.1));
+  border-color: rgba(255, 120, 160, 0.45);
+}
+.tf--false .tf__icon { background: rgba(255, 77, 109, 0.18); }
+.tf:hover:not(:disabled), .tf:focus-visible:not(:disabled) { transform: translateY(-4px) scale(1.02); }
+.tf--true:hover:not(:disabled) { box-shadow: 0 0 28px rgba(57, 255, 136, 0.45); }
+.tf--false:hover:not(:disabled) { box-shadow: 0 0 28px rgba(255, 77, 109, 0.45); }
+.tf:disabled { cursor: default; opacity: 0.45; }
+
+.tf.is-correct { opacity: 1; color: #04170E; background: #39FF88; border-color: #39FF88; box-shadow: 0 0 26px rgba(57, 255, 136, 0.75); }
+.tf.is-correct .tf__icon { background: rgba(4, 23, 14, 0.18); }
+.tf.is-wrong { opacity: 1; color: #fff; background: #E5173F; border-color: var(--red); box-shadow: 0 0 24px rgba(255, 77, 109, 0.7); }
+.tf.is-wrong .tf__icon { background: rgba(0, 0, 0, 0.22); }
+.tf.is-answer { opacity: 1; border-color: #39FF88; box-shadow: 0 0 20px rgba(57, 255, 136, 0.5); }
+
+/* ---------- Slide mode: a lesson, not a test ---------- */
+.arena__q--slide { margin-bottom: 12px; font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.01em; color: var(--cyan); }
+.arena__options--slide { display: block; }
+.slide__body { margin: 0 0 14px; font-size: 1.02rem; line-height: 1.7; color: #D6DCF2; }
+.slide__next { margin-top: 8px; }
+.arena[data-type="slide"] .arena__type { color: #7CFFC1; background: rgba(57, 255, 136, 0.12); border-color: rgba(57, 255, 136, 0.4); }
+
+/* ---------- A softer glow when the mentor speaks after a mistake ---------- */
+.mentor.is-alert {
+  border-color: rgba(255, 184, 140, 0.8);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5), 0 -2px 26px rgba(255, 184, 140, 0.45);
+  animation: calm-glow 1.4s ease-in-out 2;
+}
+.mentor.is-alert .bubble { border-color: rgba(255, 184, 140, 0.8); }
+@keyframes calm-glow {
+  50% { box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5), 0 -2px 38px rgba(255, 184, 140, 0.7); }
+}
+
+.arena__voice { white-space: nowrap; }

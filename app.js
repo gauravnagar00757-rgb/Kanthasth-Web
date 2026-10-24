@@ -195,7 +195,7 @@ function gainXp(amount) {
   xp += amount;
   const after = levelInfo(xp).level;
   if (after > before) {
-    showToast('Level ' + after, 'Standards rise. So does the difficulty.');
+    showToast('Level ' + after, 'You are growing beautifully. Keep going at your own pace.');
     return after;
   }
   return 0;
@@ -208,15 +208,15 @@ function currentTarget() {
 function mentorLines() {
   const target = currentTarget();
   const done = SKILL_TREE_DATA.filter(n => n.state === 'completed').length;
-  if (hearts <= 0) return [`No hearts left. Next heart in ${refillMinutes()} min. Revise your notes. Come back sharper.`];
-  if (!target) return ['All modules cleared. Now revise. Mocks are the next battlefield.'];
+  if (hearts <= 0) return [`You are out of hearts for now. Rest, breathe, and look over your notes. A new heart arrives in ${refillMinutes()} min.`];
+  if (!target) return ['Every module is cleared. Wonderful work. A gentle revision would be lovely next.'];
   return [
-    `Target: Clear the \u2018${target.title}\u2019 node today. Do not break the streak.`,
+    `Today\u2019s gentle goal: \u2018${target.title}\u2019. One calm step at a time.`,
     streak > 0
-      ? `${streak} correct in a row. Protect it. One module before anything else.`
-      : 'Streak is zero. Build it from your next correct answer. No excuses.',
-    `Hearts: ${hearts}/${MAX_HEARTS}. Each wrong answer costs one. Accuracy over speed.`,
-    `${done} of ${SKILL_TREE_DATA.length} cleared. Motivation fades. Discipline does not.`
+      ? `${streak} in a row. Beautiful. Keep that lovely rhythm going.`
+      : 'A fresh start is a good start. Your next answer begins a new streak.',
+    `You have ${hearts} of ${MAX_HEARTS} hearts. Mistakes are simply part of learning.`,
+    `${done} of ${SKILL_TREE_DATA.length} cleared. You are doing wonderfully, so be proud of every step.`
   ];
 }
 
@@ -262,12 +262,12 @@ treeEl.addEventListener('click', e => {
       .map(id => NODE_BY_ID.get(id))
       .filter(p => p.state !== 'completed')
       .map(p => p.title);
-    say(`\u2018${node.title}\u2019 is locked. Clear ${missing.join(' and ')} first. No shortcuts.`);
+    say(`\u2018${node.title}\u2019 is not open yet. Finish ${missing.join(' and ')} first and it will open for you. You can do it.`);
     btn.classList.remove('is-denied');
     void btn.offsetWidth;
     btn.classList.add('is-denied');
   } else {
-    say(`\u2018${node.title}\u2019 is done. Revise it once more before the weekend.`);
+    say(`\u2018${node.title}\u2019 is complete. A little revision later will help it stay with you.`);
   }
 });
 
@@ -315,20 +315,32 @@ if (HAS_SPEECH) {
   voiceBtn.hidden = true;
 }
 
+// Prefer a soft, female-sounding English voice (Indian English first) when the device has one
+const SOFT_VOICE = /samantha|karen|moira|tessa|veena|fiona|serena|allison|\bava\b|susan|zira|hazel|heera|aria|jenny|neerja|swara|sonia|libby|catherine|female|woman/i;
+const MALE_VOICE = /\bmale\b|david|\bmark\b|daniel|alex|fred|george|rishi|ravi|prabhat|james|\bguy\b|ryan|thomas|oliver|\bman\b/i;
+
 function pickVoice() {
-  return voices.find(v => /en-IN/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) || null;
+  const english = voices.filter(v => /^en/i.test(v.lang));
+  const pool = english.length ? english : voices;
+  let best = null;
+  let bestScore = -Infinity;
+  pool.forEach(v => {
+    const score = (SOFT_VOICE.test(v.name) ? 4 : 0) - (MALE_VOICE.test(v.name) ? 5 : 0) + (/en[-_]IN/i.test(v.lang) ? 2 : 0);
+    if (score > bestScore) { best = v; bestScore = score; }
+  });
+  return best;
 }
 
-// Lower pitch + faster rate = clipped, authoritative delivery
+// A slightly higher pitch and a slower rate give a calm, reassuring delivery
 function speak(text) {
   if (!HAS_SPEECH || !voiceOn) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const voice = pickVoice();
   if (voice) { u.voice = voice; u.lang = voice.lang; } else { u.lang = 'en-IN'; }
-  u.pitch = 0.8;
-  u.rate = 1.1;
-  u.volume = 1;
+  u.pitch = 1.2;
+  u.rate = 0.85;
+  u.volume = 0.95;
   speechSynthesis.speak(u);
 }
 
@@ -352,7 +364,11 @@ function shakeArena() {
 }
 
 /* ---- question formats: mcq, match, fillBlank (and bossFight, see below) ---- */
-const TYPE_LABEL = { mcq: 'Multiple choice', match: 'Match the pairs', fillBlank: 'Fill in the blank' };
+const TYPE_LABEL = { mcq: 'Multiple choice', trueFalse: 'True or false', match: 'Match the pairs', fillBlank: 'Fill in the blank', slide: 'Lesson' };
+const TF_ICONS = {
+  true: '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  false: '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path d="M6.500 6.500l11 11M17.500 6.500l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
+};
 const PAIR_COLORS = ['#39FF88', '#22E4FF', '#F6C453', '#FF7AD9', '#B79CFF'];
 const questionType = q => q.questionType || 'mcq';
 
@@ -371,7 +387,10 @@ function normalizeAnswer(s) {
 }
 
 function answerOf(q) {
-  return questionType(q) === 'fillBlank' ? String(q.answer) : q.correctAnswer;
+  const type = questionType(q);
+  if (type === 'fillBlank') return String(q.answer);
+  if (type === 'trueFalse') return q.correctAnswer ? 'True' : 'False';
+  return q.correctAnswer;
 }
 
 const currentQuestion = () => arena.questions[arena.index];
@@ -472,44 +491,137 @@ function renderFill(q) {
   arenaOptions.appendChild(wrap);
 }
 
+// Universal image support: any question or slide may carry an imageUrl (and an optional imageAlt)
+function renderFigure(q) {
+  const old = document.getElementById('arena-figure');
+  if (old) old.remove();
+  if (!q.imageUrl) return;
+
+  const fig = document.createElement('figure');
+  fig.className = 'arena__figure';
+  fig.id = 'arena-figure';
+  const img = document.createElement('img');
+  img.className = 'arena__img';
+  img.alt = q.imageAlt || '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.addEventListener('error', () => fig.remove()); // a missing or offline image never blocks the lesson
+  img.src = q.imageUrl;
+  fig.appendChild(img);
+  arenaQuestion.before(fig);
+}
+
+function renderTrueFalse() {
+  [['true', 'True'], ['false', 'False']].forEach(([val, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tf tf--' + val;
+    b.dataset.value = val;
+    const icon = document.createElement('span');
+    icon.className = 'tf__icon';
+    icon.innerHTML = TF_ICONS[val];
+    const txt = document.createElement('span');
+    txt.className = 'tf__label';
+    txt.textContent = label;
+    b.append(icon, txt);
+    arenaOptions.appendChild(b);
+  });
+}
+
+// Slide mode: a lesson, not a test. No options, no hearts, no XP
+function renderSlide(q) {
+  const wrap = document.createElement('div');
+  wrap.className = 'slide';
+  String(q.explanation).split(/\n+/).filter(Boolean).forEach(text => {
+    const p = document.createElement('p');
+    p.className = 'slide__body';
+    p.textContent = text;
+    wrap.appendChild(p);
+  });
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'btn btn--primary slide__next';
+  next.textContent = 'I Understand / Next';
+  next.addEventListener('click', onSlideNext);
+  wrap.appendChild(next);
+  arenaOptions.appendChild(wrap);
+}
+
+function onSlideNext() {
+  if (!arena || arena.busy) return;
+  stopSpeaking();
+  arena.index += 1;
+  if (arena.index < arena.questions.length) {
+    renderQuestion();
+    focusFirst();
+    return;
+  }
+  completeNode(arena.node); // a lessons-only module is finished once the last slide is read
+}
+
+function onTrueFalseClick(btn) {
+  const q = currentQuestion();
+  const chose = btn.dataset.value === 'true';
+  if (chose === q.correctAnswer) {
+    btn.classList.add('is-correct');
+    finishCorrect(q);
+  } else {
+    btn.classList.add('is-wrong');
+    const right = arenaOptions.querySelector('.tf[data-value="' + String(q.correctAnswer) + '"]');
+    if (right) right.classList.add('is-answer');
+    finishWrong(q, { answerText: q.correctAnswer ? 'True' : 'False' });
+  }
+}
+
 function renderQuestion() {
   const q = currentQuestion();
   const type = questionType(q);
   explainEl.hidden = true;
   fillList([]);
   arena.match = null;
+  arenaCard.scrollTop = 0;
 
   arenaEl.dataset.type = arena.boss ? 'bossFight' : type;
-  arenaCount.textContent = 'Question ' + (arena.index + 1) + ' of ' + arena.questions.length;
+  arenaCount.textContent = type === 'slide'
+    ? 'Lesson ' + (arena.index + 1) + ' of ' + arena.slideCount
+    : 'Question ' + (arena.index - arena.slideCount + 1) + ' of ' + (arena.questions.length - arena.slideCount);
   arenaType.textContent = arena.boss ? 'Boss fight' : TYPE_LABEL[type];
+
+  renderFigure(q);
   arenaQuestion.textContent = q.question;
+  arenaQuestion.className = 'arena__q' + (type === 'slide' ? ' arena__q--slide' : '');
   arenaOptions.className = 'arena__options arena__options--' + type;
   arenaOptions.replaceChildren();
 
   if (type === 'match') renderMatch(q);
   else if (type === 'fillBlank') renderFill(q);
-  else renderMcq(q);
+  else if (type === 'trueFalse') renderTrueFalse();
+  else if (type === 'slide') {
+    renderSlide(q);
+    say('Take your time with this one. Tap Next when it feels clear.');
+  } else renderMcq(q);
 }
 
 function openArena(node, opener) {
   checkHeartRefill();
   if (hearts <= 0) {
-    alertMentor(`No hearts left. Next heart in ${refillMinutes()} min. Revise your notes until then.`);
+    alertMentor(`No hearts left right now. A new one arrives in ${refillMinutes()} min. Rest, and review your notes until then.`);
     return;
   }
   const mod = MODULE_DATA[node.id];
   if (!mod) {
-    alertMentor(`\u2018${node.title}\u2019 has no questions loaded yet. Train on another node.`);
+    alertMentor(`\u2018${node.title}\u2019 has no questions yet. Let us try another one together.`);
     return;
   }
 
   const isBoss = mod.questionType === 'bossFight';
   const per = Number.isInteger(mod.questionsPerRun) ? mod.questionsPerRun : QUESTIONS_PER_RUN;
-  const questions = isBoss
-    ? shuffle(mod.questions)
-    : shuffle(mod.questions).slice(0, Math.max(1, Math.min(per, mod.questions.length)));
+  const slides = isBoss ? [] : mod.questions.filter(q => questionType(q) === 'slide');
+  const tests = mod.questions.filter(q => questionType(q) !== 'slide');
+  const picked = isBoss ? shuffle(tests) : shuffle(tests).slice(0, Math.max(1, Math.min(per, tests.length)));
+  const questions = slides.concat(picked);
 
-  arena = { node, mod, questions, index: 0, busy: false, awaitingContinue: false, result: null, match: null, opener, boss: null };
+  arena = { node, mod, questions, slideCount: slides.length, index: 0, busy: false, awaitingContinue: false, result: null, match: null, opener, boss: null };
 
   if (isBoss) {
     const limit = Number.isFinite(mod.timeLimit) ? mod.timeLimit : 60;
@@ -529,9 +641,9 @@ function openArena(node, opener) {
     arenaTimer.hidden = false;
     bossTick();
     arena.boss.timerId = setInterval(bossTick, 100);
-    say(`Boss fight. ${arena.boss.limit} seconds. ${arena.boss.required} of ${questions.length} correct to win. Move.`);
+    say(`Boss fight. You have ${arena.boss.limit} seconds and need ${arena.boss.required} of ${questions.length}. Breathe, and trust what you know.`);
   } else {
-    say('Read carefully. A wrong answer costs a heart and your streak.');
+    if (questionType(currentQuestion()) !== 'slide') say('Take your time and read carefully. Mistakes are how we learn.');
   }
   focusFirst();
 }
@@ -591,8 +703,8 @@ function showExplanation(q, result, opts) {
   arena.result = result;
   const ok = result === 'correct';
   const verdict = ok
-    ? `Correct. +${XP_PER_CORRECT} XP`
-    : (result === 'gameover' ? 'Wrong. That was your last heart.' : 'Wrong. You lost a heart.');
+    ? `Well done. +${XP_PER_CORRECT} XP`
+    : (result === 'gameover' ? 'Not quite. That was your last heart for now.' : 'Not quite. You used one heart.');
   const text = (opts.answerText ? `The answer is ${opts.answerText}. ` : '') + q.explanation;
   revealExplain(ok, verdict, text, (opts.list || []).map(t => ({ text: t })));
 }
@@ -617,8 +729,8 @@ function finishCorrect(q) {
   streak += 1;
   renderHUD(); // HUD reacts instantly; the reward is saved when the player presses Continue
   const line = leveled
-    ? `Level ${leveled} reached. Standards rise. Do not get comfortable.`
-    : `Correct. +${XP_PER_CORRECT} XP. Streak: ${streak}. Do not get comfortable.`;
+    ? `Level ${leveled}! I am so proud of you. Keep going at your own pace.`
+    : `Lovely. +${XP_PER_CORRECT} XP. Streak: ${streak}. Well done.`;
   say(line);
   if (leveled) speak(line);
   showExplanation(q, 'correct', {});
@@ -628,7 +740,7 @@ function finishWrong(q, opts) {
   arena.busy = true;
   lockInputs();
   const out = loseHeart();
-  const text = out ? q.mentorScolding + ' You are out of hearts. Session over. Revise, then return.' : q.mentorScolding;
+  const text = out ? q.mentorScolding + ' That was your last heart for now. Rest, review, and come back whenever you feel ready.' : q.mentorScolding;
   alertMentor(text);
   speak(text);
   if (arena.boss) { bossAnswer(q, false, opts, out); return; }
@@ -732,8 +844,8 @@ function bossAnswer(q, ok, opts, out) {
     streak += 1;
     const leveled = gainXp(XP_PER_CORRECT);
     renderHUD();
-    say(leveled ? `Level ${leveled} reached. Keep moving.` : `Correct. ${b.correct} of ${b.required} needed. Keep moving.`);
-    if (leveled) speak(`Level ${leveled} reached.`);
+    say(leveled ? `Level ${leveled}! Wonderful. Keep going.` : `Nice. ${b.correct} of ${b.required} so far. You are doing well.`);
+    if (leveled) speak(`Level ${leveled}. Wonderful.`);
   } else if (out) {
     endBoss('gameover');
     return;
@@ -766,14 +878,14 @@ function endBoss(reason) {
   if (cleared) {
     const leveled = gainXp(b.bonus);
     renderHUD();
-    say(leveled ? `Boss cleared. Level ${leveled} reached.` : `Boss cleared. +${b.bonus} XP bonus. That is the standard.`);
-    speak('Boss cleared. That is the standard.');
+    say(leveled ? `Boss cleared, and Level ${leveled} reached. How wonderful.` : `Boss cleared. +${b.bonus} XP. I knew you could do it.`);
+    speak('Boss cleared. I am so proud of you.');
   } else {
     const line = {
-      timeout: 'Time is up. Too slow. Speed comes from repetition.',
-      gameover: 'Out of hearts. The boss stands. Revise and return.',
-      failed: 'Too many mistakes to win. The boss stands. Study the review.',
-      retreat: 'You retreated. The boss stands. Do not make it a habit.'
+      timeout: 'Time is up, and that is alright. Look over the review, then try again when you are ready.',
+      gameover: 'You are out of hearts for now. Rest, and the boss will be here when you return.',
+      failed: 'Not this time, and that is okay. The review will help you in the next round.',
+      retreat: 'Stepping back is perfectly fine. Come back whenever you are ready.'
     }[reason];
     say(line);
     if (reason !== 'gameover') speak(line);
@@ -782,14 +894,14 @@ function endBoss(reason) {
   const subject = SUBJECTS.find(s => s.id === arena.mod.unlocksSubject);
   const verdict = {
     cleared: `Boss cleared. +${b.bonus} XP bonus`,
-    timeout: 'Time is up. The boss stands.',
-    gameover: 'Out of hearts. The boss stands.',
-    failed: 'Too many mistakes. The boss stands.',
-    retreat: 'You retreated. The boss stands.'
+    timeout: 'Time is up. Let us review together.',
+    gameover: 'Out of hearts for now. Let us review together.',
+    failed: 'Not this time. Let us review together.',
+    retreat: 'You stepped back. Let us review together.'
   }[reason];
   const text = cleared
-    ? (subject ? `${subject.title} is now unlocked on your dashboard.` : 'Well fought.')
-    : `You got ${b.correct} of ${b.required} needed. Review what you missed, then return.`;
+    ? (subject ? `${subject.title} is now unlocked on your dashboard. Well done.` : 'Beautifully done.')
+    : `You got ${b.correct} of ${b.required} needed. Have a gentle look at the review, then try again when you feel ready.`;
   const items = b.results.map(r => ({
     cls: r.ok ? 'is-ok' : 'is-bad',
     head: r.ok ? '\u2713' : '\u2717',
@@ -809,7 +921,7 @@ function onContinue() {
   if (a.result === 'bosscleared') {
     unlockSubject(a.mod.unlocksSubject);
     const subject = SUBJECTS.find(s => s.id === a.mod.unlocksSubject);
-    completeNode(a.node, subject ? `Boss down. ${subject.title} is unlocked. Back to work.` : 'Boss down. Back to work.');
+    completeNode(a.node, subject ? `Boss defeated. ${subject.title} is unlocked. Wonderful work.` : 'Boss defeated. Wonderful work.');
     return;
   }
   if (a.result === 'bossfailed') {
@@ -844,6 +956,8 @@ arenaOptions.addEventListener('click', e => {
   if (!arena || arena.busy) return;
   const opt = e.target.closest('.option');
   if (opt && !opt.disabled) { onOptionClick(opt); return; }
+  const tf = e.target.closest('.tf');
+  if (tf && !tf.disabled) { onTrueFalseClick(tf); return; }
   const tile = e.target.closest('.tile');
   if (tile && !tile.disabled) onTileClick(tile);
 });
@@ -1015,14 +1129,18 @@ function validateQuestion(q, where, allowedTypes) {
   if (!q || typeof q !== 'object') throw new Error(`${where} must be an object`);
   const type = questionType(q);
   if (!allowedTypes.includes(type)) throw new Error(`${where} has questionType "${type}", which is not allowed here`);
-  if (!nonBlank(q.question) || !nonBlank(q.mentorScolding) || !nonBlank(q.explanation)) {
-    throw new Error(`${where} needs question, mentorScolding and explanation`);
-  }
+  if (!nonBlank(q.question) || !nonBlank(q.explanation)) throw new Error(`${where} needs question and explanation`);
+  if (q.imageUrl !== undefined && !nonBlank(q.imageUrl)) throw new Error(`${where} imageUrl must be a non-empty string`);
+  if (q.imageAlt !== undefined && typeof q.imageAlt !== 'string') throw new Error(`${where} imageAlt must be a string`);
+  if (type === 'slide') return; // lessons need no answer and no wrong-answer message
+  if (!nonBlank(q.mentorScolding)) throw new Error(`${where} needs a mentorScolding (the gentle message shown after a wrong answer)`);
 
   if (type === 'mcq') {
     if (!Array.isArray(q.options) || q.options.length !== 4 || !q.options.includes(q.correctAnswer)) {
       throw new Error(`${where} (mcq) needs 4 options and a correctAnswer taken from them`);
     }
+  } else if (type === 'trueFalse') {
+    if (typeof q.correctAnswer !== 'boolean') throw new Error(`${where} (trueFalse) needs correctAnswer to be true or false`);
   } else if (type === 'match') {
     const ok = Array.isArray(q.pairs) && q.pairs.length >= 3 && q.pairs.length <= 5 &&
                q.pairs.every(p => p && nonBlank(p.left) && nonBlank(p.right)) &&
@@ -1058,7 +1176,7 @@ function validatePolityData(d) {
     if (!mod || !Array.isArray(mod.questions) || mod.questions.length === 0) throw new Error(`modules."${nodeId}" needs a questions array`);
 
     const boss = mod.questionType === 'bossFight';
-    const allowed = boss ? ['mcq', 'fillBlank'] : ['mcq', 'match', 'fillBlank'];
+    const allowed = boss ? ['mcq', 'trueFalse', 'fillBlank'] : ['mcq', 'trueFalse', 'match', 'fillBlank', 'slide'];
     mod.questions.forEach((q, i) => validateQuestion(q, `modules."${nodeId}".questions[${i}]`, allowed));
 
     if (boss) {
@@ -1097,7 +1215,7 @@ function applyPolityData(d) {
 async function loadPolity() {
   console.log('[Kanthasth] Loading ' + DATA_URL + '...');
   showStatus('Loading Polity\u2026', false);
-  say('Loading your targets. Stand by.');
+  say('Getting your lessons ready. One moment.');
 
   try {
     const res = await fetch(DATA_URL, { cache: 'no-cache' });
@@ -1120,7 +1238,7 @@ async function loadPolity() {
       ? ' Browsers block fetch() on file:// pages. Run a local server (python3 -m http.server) and open http://localhost:8000.'
       : ' ' + err.message;
     showStatus('Could not load the Polity data.' + hint, true);
-    say('Data failed to load. Fix it and retry. Do not waste the session.');
+    say('Something did not load. No worries, tap Retry and we will try again.');
   }
 }
 
@@ -1236,15 +1354,15 @@ function renderHero(t) {
 
   if (!t.hasSave) {
     title = 'Clear your first module';
-    line = 'No excuses. Start today and build the streak.';
+    line = 'A gentle start is all it takes. Begin whenever you feel ready.';
     cta = 'Start Journey';
   } else if (cleared) {
     title = 'All modules cleared';
-    line = 'Now revise. Mocks are the next battlefield.';
+    line = 'A little gentle revision will keep everything fresh.';
     cta = 'Revise Polity';
   } else {
-    title = t.target ? `Clear \u2018${t.target}\u2019` : 'Continue your journey';
-    line = t.streak > 0 ? `Streak: ${t.streak}. Do not break it.` : 'Streak is zero. Rebuild it today.';
+    title = t.target ? `Continue with \u2018${t.target}\u2019` : 'Continue your journey';
+    line = t.streak > 0 ? `Streak: ${t.streak}. Keep that lovely rhythm going.` : 'Start a new streak today, one answer at a time.';
     cta = 'Resume Journey';
   }
 
