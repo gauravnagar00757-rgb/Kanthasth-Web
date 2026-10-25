@@ -20,6 +20,7 @@ let streak = 0;
 let xp = 0;
 let XP_PER_LEVEL = 500;     // every XP_PER_LEVEL total XP is one level
 let unlockedSubjects = []; // subjects opened by boss fights (saved)
+let nodeStats = {}; // Tracks { attempts, mistakes, totalTime } per node
 
 /* ------------------------------------------------------------------
    MODULE DATA (filled at runtime, keyed by node id)
@@ -664,6 +665,32 @@ function openArena(node, opener) {
 
 function closeArena() {
   stopSpeaking();
+
+  // --- ANALYTICS ENGINE ---
+  if (arena) {
+    const timeSpent = Math.round((Date.now() - arena.startTime) / 1000);
+    const nodeId = arena.node.id;
+    
+    if (!nodeStats[nodeId]) nodeStats[nodeId] = { attempts: 0, mistakes: 0, totalTime: 0 };
+    nodeStats[nodeId].attempts += 1;
+    nodeStats[nodeId].mistakes += arena.mistakes;
+    nodeStats[nodeId].totalTime += timeSpent;
+
+    const stats = nodeStats[nodeId];
+    document.getElementById('report-title').textContent = arena.node.state === 'completed' ? 'Module Cleared!' : 'Performance Analysis';
+    document.getElementById('report-stats').innerHTML = `
+      <strong>Current Run:</strong><br>
+      Time Taken: ${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s<br>
+      Mistakes Made: ${arena.mistakes}<br><br>
+      <strong>All-Time Stats for this Topic:</strong><br>
+      Total Attempts: ${stats.attempts}<br>
+      Total Mistakes: ${stats.mistakes}<br>
+      Total Time Spent: ${Math.floor(stats.totalTime / 60)}m ${stats.totalTime % 60}s
+    `;
+    document.getElementById('report-modal').classList.remove('hidden');
+  }
+  // -------------------------
+
   if (arena && arena.boss) {
     clearInterval(arena.boss.timerId);
     clearTimeout(arena.boss.nextTimer);
@@ -1914,3 +1941,6 @@ function initDashboard() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDashboard);
 else initDashboard();
+document.getElementById('btn-close-report').addEventListener('click', () => {
+  document.getElementById('report-modal').classList.add('hidden');
+});
