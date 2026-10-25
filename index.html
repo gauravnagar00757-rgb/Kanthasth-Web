@@ -21,6 +21,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <script>
+    // Apply the saved theme before anything is painted, so there is no dark flash on the light theme
+    try {
+      var s = JSON.parse(localStorage.getItem('kanthasth.settings'));
+      if (s && s.theme === 'light') {
+        document.documentElement.classList.add('light-theme');
+        document.body.classList.add('light-theme');
+      }
+    } catch (e) { /* no saved settings yet */ }
+  </script>
 
   <!-- ============ DASHBOARD (home) ============ -->
   <div id="dashboard-screen">
@@ -44,6 +54,10 @@
           <span class="lvl-bar__text" id="dash-level-text">0 / 500 XP</span>
         </div>
         <span class="pill pill--hearts" id="dash-hearts" aria-label="Hearts">&#10084;&#65039; 5</span>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <svg class="ic-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.9 1.9M16.8 16.8l1.9 1.9M5.3 18.7l1.9-1.9M16.8 7.2l1.9-1.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7z" fill="currentColor"/></svg>
+        </button>
       </div>
     </header>
 
@@ -93,6 +107,15 @@
             <p class="setting__desc" id="voice-desc">The mentor speaks out loud when you answer wrong.</p>
           </div>
           <button class="switch" id="set-voice" type="button" role="switch" aria-checked="true" aria-label="Mentor voice"><span></span></button>
+        </div>
+        <div class="glass setting setting--stack">
+          <div class="setting__text">
+            <p class="setting__name">Lesson sheet</p>
+            <p class="setting__desc" id="sheet-desc">Paste the published Google Sheet link (CSV) that holds your lessons and questions.</p>
+          </div>
+          <input class="sheet-input" id="sheet-url" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" aria-label="Google Sheet CSV link">
+          <button class="btn btn--primary btn--small" id="sheet-save" type="button">Save and check</button>
+          <p class="sheet-status" id="sheet-status" role="status">Not connected yet.</p>
         </div>
         <div class="glass setting">
           <div class="setting__text">

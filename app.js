@@ -1,7 +1,10 @@
 'use strict';
 
+// This app switches between full screens, so a reload should always start at the top
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
 /* ------------------------------------------------------------------
-   DATA (filled at runtime from data/polity.json)
+   DATA (filled at runtime from the Google Sheet)
    node: { id, title, state, x (% of width), y (row), parents[], deck }
 ------------------------------------------------------------------- */
 let SKILL_TREE_DATA = [];
@@ -369,7 +372,7 @@ const TF_ICONS = {
   true: '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   false: '<svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path d="M6.500 6.500l11 11M17.500 6.500l-11 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'
 };
-const PAIR_COLORS = ['#39FF88', '#22E4FF', '#F6C453', '#FF7AD9', '#B79CFF'];
+const PAIR_COLORS = ['var(--pair-1)', 'var(--pair-2)', 'var(--pair-3)', 'var(--pair-4)', 'var(--pair-5)'];
 const questionType = q => q.questionType || 'mcq';
 
 function shuffle(list) {
@@ -552,7 +555,9 @@ function onSlideNext() {
   stopSpeaking();
   arena.index += 1;
   if (arena.index < arena.questions.length) {
+    const nextIsTest = questionType(currentQuestion()) !== 'slide';
     renderQuestion();
+    if (nextIsTest) say('Lovely. Now let us try a few questions together, gently.');
     focusFirst();
     return;
   }
@@ -580,6 +585,9 @@ function renderQuestion() {
   fillList([]);
   arena.match = null;
   arenaCard.scrollTop = 0;
+  arenaCard.classList.remove('is-step'); // restart the ease-in so each step feels continuous
+  void arenaCard.offsetWidth;
+  arenaCard.classList.add('is-step');
 
   arenaEl.dataset.type = arena.boss ? 'bossFight' : type;
   arenaCount.textContent = type === 'slide'
@@ -966,16 +974,37 @@ document.getElementById('arena-close').addEventListener('click', leaveArena);
 continueBtn.addEventListener('click', onContinue);
 
 const SETTINGS_KEY = 'kanthasth.settings';
+let theme = 'dark';   // 'dark' or 'light', saved with the other settings
+let sheetUrl = '';    // the published Google Sheet link, saved on this device
 
 function saveSettings() {
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ voice: voiceOn })); } catch (_) { /* storage unavailable */ }
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ voice: voiceOn, theme, sheetUrl })); } catch (_) { /* storage unavailable */ }
 }
 
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-    if (s && typeof s.voice === 'boolean') setVoice(s.voice, false);
+    if (!s) return;
+    if (typeof s.voice === 'boolean') setVoice(s.voice, false);
+    if (s.theme === 'light' || s.theme === 'dark') applyTheme(s.theme, false);
+    if (typeof s.sheetUrl === 'string') sheetUrl = s.sheetUrl;
   } catch (_) { /* no settings yet, or storage unavailable */ }
+}
+
+// Light theme = the .light-theme class on the body (and on <html>, so overscroll areas match too)
+function applyTheme(next, persist = true) {
+  theme = next === 'light' ? 'light' : 'dark';
+  const light = theme === 'light';
+  document.documentElement.classList.toggle('light-theme', light);
+  document.body.classList.toggle('light-theme', light);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(light));
+    btn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', light ? '#FAF5EA' : '#0E1220');
+  if (persist) saveSettings();
 }
 
 // One switch for the mentor voice, shared by the arena button and the Settings tab
@@ -990,6 +1019,7 @@ function setVoice(on, persist = true) {
 }
 
 voiceBtn.addEventListener('click', () => setVoice(!voiceOn));
+document.getElementById('theme-toggle').addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light'));
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && arena) leaveArena();
@@ -1092,22 +1122,21 @@ function resetProgress() {
 }
 
 /* ------------------------------------------------------------------
-   DATA LOADING (data/polity.json)
+   DATA LOADING (Google Sheets CSV)
 ------------------------------------------------------------------- */
-const DATA_URL = 'data/polity.json';
 const STATES = ['locked', 'unlocked', 'completed'];
 
 const statusEl = document.createElement('div');
 statusEl.className = 'tree__status';
 statusEl.setAttribute('role', 'status');
 
-function showStatus(message, withRetry) {
+function showStatus(message, withRetry, action) {
   treeEl.style.height = '';
   treeEl.querySelectorAll('.node').forEach(el => el.remove());
   linksEl.replaceChildren();
 
   statusEl.replaceChildren();
-  statusEl.classList.toggle('is-error', Boolean(withRetry));
+  statusEl.classList.toggle('is-error', Boolean(withRetry || action));
   const p = document.createElement('p');
   p.textContent = message;
   statusEl.appendChild(p);
@@ -1118,6 +1147,14 @@ function showStatus(message, withRetry) {
     retry.textContent = 'Retry';
     retry.addEventListener('click', loadPolity);
     statusEl.appendChild(retry);
+  }
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tree__action';
+    b.textContent = action.label;
+    b.addEventListener('click', action.onClick);
+    statusEl.appendChild(b);
   }
   if (!statusEl.isConnected) treeEl.appendChild(statusEl);
 }
@@ -1156,8 +1193,8 @@ function validateQuestion(q, where, allowedTypes) {
 }
 
 function validatePolityData(d) {
-  if (!d || !Array.isArray(d.nodes) || d.nodes.length === 0) throw new Error('polity.json: "nodes" must be a non-empty array');
-  if (!d.modules || typeof d.modules !== 'object') throw new Error('polity.json: "modules" must be an object');
+  if (!d || !Array.isArray(d.nodes) || d.nodes.length === 0) throw new Error('the lessons need a non-empty "nodes" list');
+  if (!d.modules || typeof d.modules !== 'object') throw new Error('the lessons need a "modules" object');
 
   const ids = new Set();
   d.nodes.forEach((n, i) => {
@@ -1212,15 +1249,298 @@ function applyPolityData(d) {
   if (d.title) document.querySelector('.top__title').textContent = d.title;
 }
 
+/* ------------------------------------------------------------------
+   GOOGLE SHEETS PIPELINE: published CSV in, game JSON out
+------------------------------------------------------------------- */
+// Optional built-in link for this app. Leave it empty to use the link pasted into Settings.
+const SHEET_URLS = { polity: '' };
+const DATA_CACHE_KEY = 'kanthasth.data.polity';
+const FETCH_TIMEOUT_MS = 12000;
+
+class SheetError extends Error {} // a problem that the person editing the sheet can fix
+
+const getSheetUrl = () => sheetUrl || SHEET_URLS.polity;
+
+// Accepts a published link, an export link, or a plain browser link to the sheet, and returns a CSV link
+function normalizeSheetUrl(raw) {
+  let url;
+  try { url = new URL(String(raw).trim()); } catch (_) { throw new SheetError('That does not look like a web link. Paste the full link from Google Sheets.'); }
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) throw new SheetError('The link must start with https://');
+
+  if (url.hostname === 'docs.google.com') {
+    if (/\/pubhtml$/.test(url.pathname)) url.pathname = url.pathname.replace(/\/pubhtml$/, '/pub');
+    if (/(output|format)=csv|tqx=out:csv/.test(url.search)) return url.href;
+    if (/\/pub$/.test(url.pathname)) { url.searchParams.set('output', 'csv'); return url.href; }
+    const m = url.pathname.match(/\/spreadsheets\/d\/([^/]+)/);
+    if (m && m[1] !== 'e') { // a normal "edit" link: use the export endpoint of that tab
+      const gid = (url.hash + url.search).match(/gid=(\d+)/);
+      return 'https://docs.google.com/spreadsheets/d/' + m[1] + '/export?format=csv&gid=' + (gid ? gid[1] : '0');
+    }
+  }
+  return url.href;
+}
+
+async function fetchSheetCsv(rawUrl) {
+  const url = normalizeSheetUrl(rawUrl);
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: ctl.signal });
+    if (!res.ok) throw new SheetError('The sheet answered with HTTP ' + res.status + '. Check that it is published to the web.');
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) {
+      throw new SheetError('That link returned a web page, not CSV. In Google Sheets use File > Share > Publish to web, choose your sheet and CSV.');
+    }
+    if (!text.trim()) throw new SheetError('The sheet is empty.');
+    return text;
+  } catch (err) {
+    if (err instanceof SheetError) throw err;
+    if (err && err.name === 'AbortError') throw new SheetError('The sheet took too long to answer. Check your connection and try again.');
+    throw new SheetError('Could not reach the sheet. Check your connection and the link.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Keep the last good copy, so lessons still open offline or when the sheet has a typo
+function writeCachedData(url, data) {
+  try { localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({ url: normalizeSheetUrl(url), savedAt: Date.now(), data })); } catch (_) { /* storage full or blocked */ }
+}
+function readCachedData(url) {
+  try {
+    const c = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
+    if (c && c.data && c.url === normalizeSheetUrl(url)) return c.data;
+  } catch (_) { /* no usable cache */ }
+  return null;
+}
+
+/* ---- CSV text to rows (handles quotes, commas and line breaks inside cells) ---- */
+function parseCsv(input) {
+  const text = input.charCodeAt(0) === 0xFEFF ? input.slice(1) : input;
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+      } else field += c;
+    } else if (c === '"' && field === '') quoted = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(cell => cell.trim() !== ''));
+}
+
+/* ---- rows to the exact JSON schema the game already uses ---- */
+const SHEET_TYPES = {
+  setting: 'setting', settings: 'setting', node: 'node', boss: 'boss', bossfight: 'boss',
+  slide: 'slide', lesson: 'slide', mcq: 'mcq', multiplechoice: 'mcq',
+  truefalse: 'trueFalse', tf: 'trueFalse', fillblank: 'fillBlank', fillintheblank: 'fillBlank', fill: 'fillBlank',
+  match: 'match', matching: 'match'
+};
+const HEADER_ALIASES = {
+  question_text: 'question', correct_answer: 'answer', correct: 'answer', wrong_answer_message: 'wrong_message',
+  mentor_message: 'wrong_message', image: 'image_url', imageurl: 'image_url', accepted: 'accepted_answers',
+  node: 'node_id', module: 'node_id', type_of_row: 'type', row_type: 'type'
+};
+const SETTING_KEYS = { max_hearts: 'maxHearts', xp_per_correct: 'xpPerCorrect', questions_per_run: 'questionsPerRun', xp_per_level: 'xpPerLevel' };
+const GENTLE = [
+  'That is okay. The answer is {a}. Every mistake helps you remember it better.',
+  'Not quite, and that is perfectly alright. It is {a}. You will get it next time.',
+  'Gently now. The answer is {a}. Take a breath, you are doing just fine.',
+  'No worries at all. {a} is the one. Learning takes patience, and you are showing it.'
+];
+
+function sheetCsvToGame(csvText) {
+  const table = parseCsv(csvText);
+  if (table.length < 2) throw new SheetError('The sheet needs a header row and at least one row of content.');
+
+  const head = table[0].map(h => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')).map(h => HEADER_ALIASES[h] || h);
+  const col = {};
+  head.forEach((h, i) => { if (!(h in col)) col[h] = i; });
+  ['type', 'node_id'].forEach(c => {
+    if (!(c in col)) throw new SheetError('The first row must be a header row with a "' + c + '" column.');
+  });
+
+  const errors = [];
+  const bad = (rowNo, what, msg) => errors.push('Row ' + rowNo + ' (' + what + '): ' + msg);
+  const game = { schemaVersion: 1, module: 'polity', title: 'Polity', settings: {}, nodes: [], modules: {} };
+  const nodeRow = {};
+  const perRun = {};
+  const bosses = {};
+  let wrongCount = 0;
+
+  table.slice(1).forEach((cells, i) => {
+    const rowNo = i + 2;
+    const g = k => (k in col && cells[col[k]] !== undefined ? cells[col[k]].trim() : '');
+    const txt = k => g(k).replace(/\\n/g, '\n');
+    const num = k => (g(k) === '' ? undefined : Number(g(k)));
+    const rawType = g('type');
+    if (rawType.startsWith('#')) return; // comment row
+    if (!rawType) return bad(rowNo, 'no type', 'the type column is empty.');
+    const type = SHEET_TYPES[rawType.toLowerCase().replace(/[^a-z]/g, '')];
+    if (!type) return bad(rowNo, rawType, 'unknown type. Use setting, node, boss, slide, mcq, trueFalse, fillBlank or match.');
+
+    if (type === 'setting') {
+      const key = g('key').toLowerCase().replace(/[^a-z]+/g, '_').replace(/^_|_$/g, '');
+      const value = g('value');
+      if (key === 'title') { if (value) game.title = value; }
+      else if (key === 'module') { if (value) game.module = value; }
+      else if (SETTING_KEYS[key]) {
+        const n = Number(value);
+        if (value === '' || !Number.isFinite(n)) bad(rowNo, 'setting', '"' + g('key') + '" needs a number in the value column.');
+        else game.settings[SETTING_KEYS[key]] = n;
+      } else bad(rowNo, 'setting', 'unknown key "' + g('key') + '". Use title, module, max_hearts, xp_per_correct, questions_per_run or xp_per_level.');
+      return;
+    }
+
+    const nodeId = g('node_id');
+    if (!nodeId) return bad(rowNo, type, 'node_id is empty.');
+
+    if (type === 'node') {
+      const x = num('x');
+      const y = num('y');
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return bad(rowNo, 'node', 'x and y must be numbers (x is 0 to 100 across, y is the row starting at 0).');
+      if (nodeRow[nodeId]) return bad(rowNo, 'node', 'node_id "' + nodeId + '" is already used on row ' + nodeRow[nodeId] + '.');
+      nodeRow[nodeId] = rowNo;
+      const parents = g('parents').split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+      const state = g('state').toLowerCase() || (parents.length ? 'locked' : 'unlocked');
+      if (!STATES.includes(state)) return bad(rowNo, 'node', 'state must be locked, unlocked or completed.');
+      const node = { id: nodeId, title: g('title') || nodeId, state, x, y, parents };
+      if (g('node_type').toLowerCase() === 'boss') node.type = 'boss';
+      if (g('deck')) node.deck = g('deck');
+      game.nodes.push(node);
+      const per = num('questions_per_run');
+      if (per !== undefined) {
+        if (!Number.isInteger(per) || per < 1) bad(rowNo, 'node', 'questions_per_run must be a whole number, 1 or more.');
+        else perRun[nodeId] = per;
+      }
+      return;
+    }
+
+    if (type === 'boss') {
+      const props = { questionType: 'bossFight', row: rowNo };
+      [['time_limit', 'timeLimit'], ['required_correct', 'requiredCorrect'], ['bonus_xp', 'bonusXp']].forEach(([from, to]) => {
+        const n = num(from);
+        if (n === undefined) return;
+        if (!Number.isFinite(n)) bad(rowNo, 'boss', from + ' must be a number.');
+        else props[to] = n;
+      });
+      if (g('unlocks_subject')) props.unlocksSubject = g('unlocks_subject');
+      bosses[nodeId] = props;
+      return;
+    }
+
+    // everything else is a slide or a question that belongs to a node
+    const q = { questionType: type, question: txt('question') || (type === 'slide' ? txt('title') : '') };
+    if (!q.question) return bad(rowNo, type, 'the question column is empty.' + (type === 'slide' ? ' For a slide it holds the title.' : ''));
+    if (g('image_url')) q.imageUrl = g('image_url');
+    if (g('image_alt')) q.imageAlt = g('image_alt');
+    q.explanation = txt('explanation');
+    if (!q.explanation) return bad(rowNo, type, 'the explanation column is empty. For a slide it is the body text.');
+
+    let answerText = '';
+    if (type === 'mcq') {
+      const options = ['option_a', 'option_b', 'option_c', 'option_d'].map(g);
+      if (options.some(o => !o)) return bad(rowNo, 'mcq', 'option_a to option_d must all be filled in.');
+      if (new Set(options).size !== 4) return bad(rowNo, 'mcq', 'the four options must all be different.');
+      const a = g('answer');
+      const letter = /^[a-d]$/i.test(a) ? options['abcd'.indexOf(a.toLowerCase())] : options.find(o => o.toLowerCase() === a.toLowerCase());
+      if (!letter) return bad(rowNo, 'mcq', 'answer must be A, B, C or D (or the exact text of one option).');
+      q.options = options;
+      q.correctAnswer = letter;
+      answerText = letter;
+    } else if (type === 'trueFalse') {
+      const a = g('answer').toLowerCase();
+      if (['true', 't', 'yes', 'y', '1'].includes(a)) q.correctAnswer = true;
+      else if (['false', 'f', 'no', 'n', '0'].includes(a)) q.correctAnswer = false;
+      else return bad(rowNo, 'trueFalse', 'answer must be TRUE or FALSE.');
+      answerText = q.correctAnswer ? 'True' : 'False';
+    } else if (type === 'fillBlank') {
+      if (!g('answer')) return bad(rowNo, 'fillBlank', 'answer is empty.');
+      q.answer = g('answer');
+      const accepted = g('accepted_answers').split('|').map(s => s.trim()).filter(Boolean);
+      if (accepted.length) q.acceptedAnswers = accepted;
+      if (g('hint')) q.hint = g('hint');
+      answerText = q.answer;
+    } else if (type === 'match') {
+      const pairs = g('pairs').split('|').map(s => s.trim()).filter(Boolean).map(s => {
+        const parts = s.split(/\s*(?:::|=>)\s*/);
+        return parts.length === 2 && parts[0] && parts[1] ? { left: parts[0], right: parts[1] } : null;
+      });
+      if (pairs.length < 3 || pairs.length > 5 || pairs.some(p => !p)) {
+        return bad(rowNo, 'match', 'pairs needs 3 to 5 items written as  left :: right | left :: right | left :: right');
+      }
+      q.pairs = pairs;
+    }
+
+    if (type !== 'slide') {
+      q.mentorScolding = txt('wrong_message') ||
+        (type === 'match' ? 'That is alright. The correct pairs are shown below. Take your time with them.' : GENTLE[wrongCount++ % GENTLE.length].replace('{a}', answerText));
+    }
+    (game.modules[nodeId] = game.modules[nodeId] || { questions: [] }).questions.push(q);
+  });
+
+  Object.keys(bosses).forEach(id => {
+    const { row, ...props } = bosses[id];
+    if (!game.modules[id]) bad(row, 'boss', 'node_id "' + id + '" has a boss row but no question rows.');
+    else Object.assign(game.modules[id], props);
+  });
+  Object.keys(perRun).forEach(id => { if (game.modules[id]) game.modules[id].questionsPerRun = perRun[id]; });
+  Object.keys(game.modules).forEach(id => {
+    if (!nodeRow[id]) errors.push('Questions use node_id "' + id + '", but no row of type node defines it.');
+  });
+  if (!game.nodes.length) errors.push('No row has type "node", so the skill tree would be empty.');
+
+  if (errors.length) {
+    const shown = errors.slice(0, 4).join(' ');
+    throw new SheetError('Your sheet has ' + errors.length + ' problem' + (errors.length > 1 ? 's' : '') + '. ' + shown + (errors.length > 4 ? ' (and ' + (errors.length - 4) + ' more)' : ''));
+  }
+  return game;
+}
+
+function describeGame(game) {
+  const all = Object.values(game.modules).flatMap(m => m.questions);
+  const slides = all.filter(q => questionType(q) === 'slide').length;
+  return game.nodes.length + ' nodes, ' + slides + ' slides and ' + (all.length - slides) + ' questions';
+}
+
+// Tries the sheet first; falls back to the last good copy. Returns { data, source }
+async function loadGameData() {
+  const url = getSheetUrl();
+  if (!url) {
+    const e = new SheetError('No lesson sheet is connected yet. Open Settings, paste your published Google Sheet link, and come back.');
+    e.code = 'NO_SHEET';
+    throw e;
+  }
+  try {
+    const game = sheetCsvToGame(await fetchSheetCsv(url));
+    validatePolityData(game);
+    writeCachedData(url, game);
+    return { data: game, source: 'live' };
+  } catch (err) {
+    const cached = readCachedData(url);
+    if (!cached) throw err;
+    console.warn('[Kanthasth] Using the saved copy of the lessons:', err.message);
+    return { data: cached, source: 'saved', reason: err.message };
+  }
+}
+
 async function loadPolity() {
-  console.log('[Kanthasth] Loading ' + DATA_URL + '...');
+  console.log('[Kanthasth] Loading the lessons from your Google Sheet...');
   showStatus('Loading Polity\u2026', false);
   say('Getting your lessons ready. One moment.');
 
   try {
-    const res = await fetch(DATA_URL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' while fetching ' + DATA_URL);
-    const data = await res.json();
+    const { data, source } = await loadGameData();
     validatePolityData(data);
     applyPolityData(data);
     const restored = loadProgress();
@@ -1231,14 +1551,17 @@ async function loadPolity() {
     renderTree();
     lineIndex = 0;
     say(mentorLines()[0]);
-    console.log('[Kanthasth] Loaded ' + SKILL_TREE_DATA.length + ' nodes.');
+    if (source === 'saved') showToast('Using saved lessons', 'The sheet could not be read just now.');
+    console.log('[Kanthasth] Loaded ' + describeGame(data) + ' (' + source + ').');
   } catch (err) {
     console.error('[Kanthasth] Data load failed:', err);
-    const hint = location.protocol === 'file:'
-      ? ' Browsers block fetch() on file:// pages. Run a local server (python3 -m http.server) and open http://localhost:8000.'
-      : ' ' + err.message;
-    showStatus('Could not load the Polity data.' + hint, true);
-    say('Something did not load. No worries, tap Retry and we will try again.');
+    if (err.code === 'NO_SHEET') {
+      showStatus(err.message, false, { label: 'Open Settings', onClick: () => { showView('settings'); showDashboard(); } });
+      say('Let us connect your lesson sheet first. It only takes a minute.');
+    } else {
+      showStatus('Could not load the lessons. ' + err.message, true);
+      say('Something did not load. No worries, tap Retry and we will try again.');
+    }
   }
 }
 
@@ -1458,7 +1781,7 @@ function enterGameplay() {
   swapScreens(dashboardScreen, gameScreen, () => {
     if (!gameStarted) {
       gameStarted = true;
-      startGameplay(); // existing logic: restore save, fetch polity.json, render the tree
+      startGameplay(); // restore the save, load the lessons from the sheet, render the tree
     }
     gameScreen.focus({ preventScroll: true });
     transitioning = false;
@@ -1532,11 +1855,49 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !confirmEl.classList.contains('hidden')) closeConfirm();
 });
 
+/* Settings: connect and check the lesson sheet */
+const sheetInput = document.getElementById('sheet-url');
+const sheetSave = document.getElementById('sheet-save');
+const sheetStatus = document.getElementById('sheet-status');
+
+function setSheetStatus(message, kind) {
+  sheetStatus.textContent = message;
+  sheetStatus.className = 'sheet-status' + (kind ? ' is-' + kind : '');
+}
+
+sheetSave.addEventListener('click', async () => {
+  const raw = sheetInput.value.trim();
+  if (!raw) {
+    sheetUrl = '';
+    saveSettings();
+    gameStarted = false;
+    setSheetStatus('Lesson sheet disconnected.', '');
+    return;
+  }
+  sheetSave.disabled = true;
+  setSheetStatus('Checking your sheet\u2026', '');
+  try {
+    const game = sheetCsvToGame(await fetchSheetCsv(raw));
+    validatePolityData(game);
+    writeCachedData(raw, game);
+    sheetUrl = raw;
+    saveSettings();
+    gameStarted = false; // the next visit to the skill tree loads the new lessons
+    setSheetStatus('Connected. Found ' + describeGame(game) + '.', 'ok');
+  } catch (err) {
+    setSheetStatus(err.message, 'bad');
+  } finally {
+    sheetSave.disabled = false;
+  }
+});
+
 function initDashboard() {
   document.getElementById('dash-welcome').textContent = 'Welcome, ' + PLAYER_NAME;
   document.getElementById('lb-avatar').textContent = PLAYER_NAME.charAt(0).toUpperCase();
   document.getElementById('lb-name').textContent = PLAYER_NAME;
   loadSettings();
+  sheetInput.value = sheetUrl;
+  setSheetStatus(getSheetUrl() ? 'A lesson sheet link is saved on this device.' : 'Not connected yet.', '');
   if (!HAS_SPEECH) {
     voiceSwitch.disabled = true;
     voiceSwitch.setAttribute('aria-checked', 'false');
