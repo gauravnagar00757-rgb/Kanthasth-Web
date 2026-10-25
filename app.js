@@ -253,12 +253,18 @@ function syncBottomPadding() {
 /* ------------------------------------------------------------------
    EVENTS
 ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   EVENTS
+------------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   EVENTS
+------------------------------------------------------------------- */
 treeEl.addEventListener('click', e => {
   const btn = e.target.closest('.node');
   if (!btn) return;
   const node = NODE_BY_ID.get(btn.dataset.id);
 
-  if (node.state === 'unlocked') {
+  if (node.state === 'unlocked' || node.state === 'completed') {
     openArena(node, btn);
   } else if (node.state === 'locked') {
     const missing = node.parents
