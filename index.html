@@ -154,6 +154,16 @@
       </div>
     </div>
   </div>
+  <!-- Analytics Report Modal -->
+  <div class="confirm hidden" id="report-modal" role="dialog" aria-modal="true" style="z-index: 100;">
+    <div class="confirm__card">
+      <h2 class="confirm__title" id="report-title" style="color: var(--cyan);">Module Analysis</h2>
+      <div id="report-stats" style="margin-bottom: 20px; color: var(--text-2); line-height: 1.6; font-size: 0.95rem;"></div>
+      <div class="confirm__actions">
+        <button class="btn btn--primary" id="btn-close-report" type="button">Close Report</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Level-up toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
