@@ -31,6 +31,50 @@
       }
     } catch (e) { /* no saved settings yet */ }
   </script>
+  <script>
+    // Today's Sankalp already accepted? Then the dashboard shows straight away, with no flash of the Sankalp screen
+    try {
+      var m = JSON.parse(localStorage.getItem('kanthasth.sankalp'));
+      var today = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+      if (m && m.accepted && m.day === today) document.documentElement.classList.add('sankalp-done');
+    } catch (e) { /* first launch */ }
+  </script>
+
+  <!-- ============ DAILY SANKALP (shown first, once a day) ============ -->
+  <div id="sankalp-screen">
+    <div class="dash__bg" aria-hidden="true">
+      <i class="orb orb--violet"></i><i class="orb orb--cyan"></i><i class="orb orb--pink"></i>
+    </div>
+    <div class="sankalp__inner">
+      <p class="sankalp__date" id="sankalp-date"></p>
+      <h1 class="sankalp__title">Daily Sankalp</h1>
+
+      <figure class="sankalp__quote glass">
+        <blockquote class="sankalp__verse" id="sankalp-quote"></blockquote>
+        <p class="sankalp__meaning" id="sankalp-meaning"></p>
+        <figcaption class="sankalp__source" id="sankalp-source"></figcaption>
+        <button class="sankalp__listen" id="sankalp-listen" type="button">&#128266; Listen</button>
+      </figure>
+
+      <section class="sankalp__mission glass" aria-labelledby="sankalp-target-title">
+        <p class="sankalp__mission-title" id="sankalp-target-title">Today&rsquo;s Target</p>
+        <p class="sankalp__target" id="sankalp-target"></p>
+        <label class="sankalp__label" for="sankalp-custom">Add your own target (optional)</label>
+        <input class="sheet-input" id="sankalp-custom" type="text" maxlength="80" autocomplete="off" placeholder="A number like 3, or a note like Revise Physics">
+      </section>
+
+      <div class="hold">
+        <button class="hold__btn" id="sankalp-hold" type="button" aria-describedby="hold-hint">
+          <svg class="hold__ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="hold__track" cx="60" cy="60" r="54" pathLength="1"/>
+            <circle class="hold__fill" cx="60" cy="60" r="54" pathLength="1"/>
+          </svg>
+          <span class="hold__label">I Accept the Mission</span>
+        </button>
+        <p class="hold__hint" id="hold-hint">Press and hold for 2 seconds</p>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ DASHBOARD (home) ============ -->
   <div id="dashboard-screen">
@@ -78,6 +122,16 @@
           <button class="btn btn--primary hero__cta" id="hero-cta" type="button">Start Journey</button>
         </article>
 
+        <article class="mission glass" id="mission-card" hidden>
+          <div class="mission__top">
+            <span class="mission__title" id="mission-title">Today&rsquo;s Mission</span>
+            <span class="mission__count" id="mission-count"></span>
+          </div>
+          <p class="mission__text" id="mission-text"></p>
+          <div class="mission__bar"><span id="mission-fill"></span></div>
+          <p class="mission__note" id="mission-note" hidden></p>
+        </article>
+
         <h2 class="dash__h2">Subjects</h2>
         <div class="subjects" id="subjects"></div>
       </section>
@@ -111,8 +165,9 @@
         <div class="glass setting setting--stack">
           <div class="setting__text">
             <p class="setting__name">Lesson sheet</p>
-            <p class="setting__desc" id="sheet-desc">Paste the published Google Sheet link (CSV) that holds your lessons and questions.</p>
+            <p class="setting__desc" id="sheet-desc">Pick a subject, then paste the published Google Sheet link (CSV) that holds its lessons and questions.</p>
           </div>
+          <select class="sheet-select" id="sheet-subject" aria-label="Subject"></select>
           <input class="sheet-input" id="sheet-url" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" aria-label="Google Sheet CSV link">
           <button class="btn btn--primary btn--small" id="sheet-save" type="button">Save and check</button>
           <p class="sheet-status" id="sheet-status" role="status">Not connected yet.</p>
@@ -154,21 +209,40 @@
       </div>
     </div>
   </div>
-  <!-- Analytics Report Modal -->
-  <div class="confirm hidden" id="report-modal" role="dialog" aria-modal="true" style="z-index: 100;">
-    <div class="confirm__card">
-      <h2 class="confirm__title" id="report-title" style="color: var(--cyan);">Module Analysis</h2>
-      <div id="report-stats" style="margin-bottom: 20px; color: var(--text-2); line-height: 1.6; font-size: 0.95rem;"></div>
-      <div class="confirm__actions">
-        <button class="btn btn--primary" id="btn-close-report" type="button">Close Report</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Level-up toast -->
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span class="toast__title" id="toast-title"></span>
     <span class="toast__text" id="toast-text"></span>
+  </div>
+
+  <!-- Chill Mode: the reward for finishing today's mission -->
+  <div class="chill hidden" id="chill" role="dialog" aria-modal="true" aria-labelledby="chill-title">
+    <div class="chill__card">
+      <div class="chill__icon" aria-hidden="true">&#127807;</div>
+      <h2 class="chill__title" id="chill-title">Mission Accomplished!</h2>
+      <p class="chill__text">You have earned your rest. Chill Mode is on for today, so breathe out, relax, and be proud of yourself.</p>
+      <p class="chill__note" id="chill-note" hidden></p>
+      <button class="btn btn--primary" id="chill-done" type="button">Rest well</button>
+    </div>
+  </div>
+
+  <!-- Performance Analysis: shown whenever a module is completed or closed -->
+  <div class="analysis hidden" id="analysis" role="dialog" aria-modal="true" aria-labelledby="analysis-title">
+    <div class="analysis__card">
+      <span class="analysis__badge" id="analysis-badge"></span>
+      <h2 class="analysis__title" id="analysis-title">Performance Analysis</h2>
+      <p class="analysis__node" id="analysis-node"></p>
+      <h3 class="analysis__h">This run</h3>
+      <div class="analysis__grid analysis__grid--3" id="analysis-run"></div>
+      <h3 class="analysis__h">All time</h3>
+      <div class="analysis__grid analysis__grid--4" id="analysis-all"></div>
+      <p class="analysis__note" id="analysis-note"></p>
+      <div class="analysis__actions">
+        <button class="btn btn--ghost" id="analysis-again" type="button">Play again</button>
+        <button class="btn btn--primary" id="analysis-done" type="button">Back to skill tree</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ GAMEPLAY ============ -->
@@ -202,7 +276,10 @@
       </div>
       <div class="arena__meta">
         <p class="arena__count" id="arena-count"></p>
-        <span class="arena__type" id="arena-type"></span>
+        <span class="arena__tags">
+          <span class="arena__badge" id="arena-pyq" hidden></span>
+          <span class="arena__type" id="arena-type"></span>
+        </span>
       </div>
       <div class="timer" id="arena-timer" hidden>
         <div class="timer__bar"><span id="timer-fill"></span></div>

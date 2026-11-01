@@ -1,6 +1,6 @@
 /* Kanthasth service worker.
    Bump VERSION whenever you ship new files, so old caches are dropped. */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'kanthasth-' + VERSION;
 
 const PRECACHE = [

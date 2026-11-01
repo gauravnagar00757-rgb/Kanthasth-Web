@@ -1250,3 +1250,282 @@ body.light-theme {
 
 #dashboard-screen, #gameplay-screen { overflow-anchor: none; }
 .dash__welcome { font-size: clamp(0.95rem, 4.6vw, 1.15rem); }
+
+/* ======================================================================
+   PHASE 11: MODULE ANALYSIS, SIMULATIONS AND VIDEOS, SUBJECT PICKER
+   ====================================================================== */
+
+/* ---------- Module Analysis ---------- */
+.analysis {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(var(--base), 0.86);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.analysis__card {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 22px 20px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--surface), var(--card-end));
+  border: 1px solid var(--edge);
+  box-shadow: 0 0 0 1px rgba(34, 228, 255, 0.14), 0 22px 60px rgba(var(--shadow), 0.5);
+  animation: step-in 0.35s ease both;
+}
+.analysis__badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 800; }
+.analysis__badge.is-done { color: var(--ok-text); background: rgba(57, 255, 136, 0.14); border: 1px solid rgba(57, 255, 136, 0.45); }
+.analysis__badge.is-ended { color: var(--gold); background: rgba(246, 196, 83, 0.14); border: 1px solid rgba(246, 196, 83, 0.45); }
+.analysis__title { margin: 12px 0 2px; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+.analysis__node { margin: 0 0 16px; font-weight: 700; color: var(--cyan); }
+.analysis__h { margin: 14px 0 8px; font-size: 0.85rem; font-weight: 800; color: var(--muted); }
+.analysis__grid { display: grid; gap: 8px; }
+.analysis__grid--3 { grid-template-columns: repeat(3, 1fr); }
+.analysis__grid--4 { grid-template-columns: repeat(4, 1fr); }
+.tile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  background: rgba(var(--tint), 0.07);
+  border: 1px solid rgba(var(--tint), 0.1);
+}
+.tile-stat__v { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tile-stat__k { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+.analysis__note { margin: 16px 0 18px; font-size: 0.92rem; line-height: 1.5; color: var(--text-2); }
+.analysis__actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.analysis__actions .btn { min-height: 48px; padding: 10px 12px; font-size: 0.95rem; }
+@media (max-width: 360px) { .analysis__grid--4 { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- Simulations and deep-dive videos ---------- */
+.media { margin: 0 0 14px; }
+.media__row { display: flex; flex-wrap: wrap; gap: 8px; }
+.media__btn {
+  padding: 9px 14px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--cyan);
+  background: rgba(34, 228, 255, 0.1);
+  border: 1px solid rgba(34, 228, 255, 0.45);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.media__btn--video { color: var(--streak); background: rgba(255, 163, 92, 0.1); border-color: rgba(255, 163, 92, 0.5); }
+.media__btn:hover, .media__btn[aria-expanded="true"] { box-shadow: 0 0 16px rgba(34, 228, 255, 0.35); background: rgba(34, 228, 255, 0.2); }
+.media__btn--video:hover, .media__btn--video[aria-expanded="true"] { box-shadow: 0 0 16px rgba(255, 163, 92, 0.35); background: rgba(255, 163, 92, 0.2); }
+.media__panel { margin-top: 10px; animation: step-in 0.3s ease both; }
+.media__frame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--edge);
+}
+.media__frame iframe, .media__frame video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.media__frame--note {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.media__open { display: inline-block; margin-top: 8px; font-size: 0.82rem; font-weight: 700; color: var(--cyan); }
+
+/* ---------- Subject picker for the sheet link ---------- */
+.sheet-select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--edge);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.sheet-select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 14px rgba(34, 228, 255, 0.3); }
+
+/* ======================================================================
+   PHASE 12: DAILY SANKALP, MISSION, CHILL MODE, SURPRISE ENGINE, EXAM TAGS
+   ====================================================================== */
+
+/* the dashboard waits behind the Sankalp screen until today's mission is accepted */
+html:not(.sankalp-done) #dashboard-screen { display: none; }
+html.sankalp-done #sankalp-screen { display: none; }
+#sankalp-screen { position: relative; min-height: 100vh; min-height: 100svh; isolation: isolate; transition: opacity 0.45s ease; }
+#sankalp-screen.is-fading { opacity: 0; pointer-events: none; }
+
+.sankalp__inner { max-width: 520px; margin: 0 auto; padding: 34px 22px 40px; display: flex; flex-direction: column; gap: 18px; }
+.sankalp__date { margin: 0; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--muted); }
+.sankalp__title { margin: -6px 0 0; text-align: center; font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+.sankalp__quote { margin: 0; padding: 22px 20px 16px; border-radius: 24px; text-align: center; }
+.sankalp__verse { margin: 0 0 14px; font-family: "Noto Serif Devanagari", Georgia, "Times New Roman", serif; font-size: 1.2rem; line-height: 1.5; font-style: italic; color: var(--cyan); }
+.sankalp__meaning { margin: 0 0 12px; font-size: 1.02rem; line-height: 1.6; color: var(--text-2); }
+.sankalp__source { font-size: 0.82rem; font-weight: 800; color: var(--gold); }
+.sankalp__listen {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(var(--tint), 0.08);
+  border: 1px solid rgba(var(--tint), 0.18);
+}
+.sankalp__listen:hover { border-color: var(--cyan); }
+.sankalp__mission { padding: 16px 18px; border-radius: 20px; }
+.sankalp__mission-title { margin: 0; font-size: 0.82rem; font-weight: 800; color: var(--muted); }
+.sankalp__target { margin: 6px 0 14px; font-size: 1.15rem; font-weight: 800; }
+.sankalp__label { display: block; margin-bottom: 6px; font-size: 0.82rem; font-weight: 700; color: var(--text-3); }
+
+.hold { display: grid; justify-items: center; gap: 12px; margin-top: 4px; }
+.hold__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 164px;
+  height: 164px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--glass);
+  box-shadow: 0 8px 28px rgba(var(--shadow), 0.4), inset 0 1px 0 rgba(var(--tint), 0.14);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+}
+.hold__ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+.hold__track, .hold__fill { fill: none; stroke-width: 6; }
+.hold__track { stroke: rgba(var(--tint), 0.16); }
+.hold__fill { stroke: var(--cyan); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 6px rgba(34, 228, 255, 0.75)); }
+.hold__label { position: relative; max-width: 100px; font-size: 1rem; font-weight: 800; line-height: 1.25; text-align: center; pointer-events: none; }
+.hold__btn.is-holding { transform: scale(0.96); box-shadow: 0 0 36px rgba(34, 228, 255, 0.5), inset 0 1px 0 rgba(var(--tint), 0.14); }
+.hold__btn.is-done .hold__fill { stroke: var(--ok); }
+.hold__hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+/* ---------- Mission card on the dashboard ---------- */
+.mission { margin-top: 16px; padding: 16px 18px; border-radius: 20px; }
+.mission[hidden] { display: none; }
+.mission__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mission__title { font-size: 0.9rem; font-weight: 800; color: var(--cyan); }
+.mission__count { font-size: 0.85rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mission__text { margin: 8px 0 12px; font-size: 1rem; font-weight: 700; line-height: 1.4; }
+.mission__bar { height: 8px; border-radius: 99px; background: rgba(var(--tint), 0.12); overflow: hidden; }
+.mission__bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width 0.6s ease; }
+.mission__note { margin: 10px 0 0; font-size: 0.85rem; color: var(--text-3); }
+.mission.is-chill { border-color: rgba(57, 255, 136, 0.5); box-shadow: 0 0 26px rgba(57, 255, 136, 0.2); }
+.mission.is-chill .mission__title { color: var(--ok-text); }
+.mission.is-chill .mission__bar span { background: var(--ok); }
+
+/* ---------- Chill Mode modal ---------- */
+.chill {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(var(--base), 0.88);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.chill__card {
+  width: 100%;
+  max-width: 380px;
+  padding: 28px 22px 22px;
+  text-align: center;
+  border-radius: 26px;
+  background: linear-gradient(180deg, var(--surface), var(--card-end));
+  border: 1px solid rgba(57, 255, 136, 0.5);
+  box-shadow: 0 0 44px rgba(57, 255, 136, 0.25), 0 22px 60px rgba(var(--shadow), 0.45);
+  animation: step-in 0.4s ease both;
+}
+.chill__icon { font-size: 3rem; line-height: 1; animation: chill-float 3.2s ease-in-out infinite; }
+@keyframes chill-float { 50% { transform: translateY(-6px); } }
+.chill__title { margin: 12px 0 8px; font-size: 1.5rem; font-weight: 800; color: var(--ok-text); }
+.chill__text { margin: 0 0 12px; line-height: 1.6; color: var(--text-2); }
+.chill__note { margin: 0 0 14px; font-size: 0.88rem; font-weight: 700; color: var(--text-3); }
+.chill .btn { margin-top: 6px; }
+
+/* ---------- Exam tag and the Surprise Engine ---------- */
+.arena__tags { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+.arena__badge {
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gold);
+  background: rgba(246, 196, 83, 0.14);
+  border: 1px solid rgba(246, 196, 83, 0.5);
+}
+.arena__badge[hidden] { display: none; }
+.arena[data-type="rapid"] .arena__card { border-color: rgba(246, 196, 83, 0.6); box-shadow: 0 0 40px rgba(246, 196, 83, 0.2), 0 20px 60px rgba(var(--shadow), 0.55); }
+.arena[data-type="rapid"] .arena__type { color: var(--gold); background: rgba(246, 196, 83, 0.14); border-color: rgba(246, 196, 83, 0.5); }
+
+.surprise {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--text-2);
+  background: rgba(var(--tint), 0.06);
+  border: 1px solid rgba(var(--tint), 0.14);
+}
+.surprise__icon { font-size: 1.2rem; line-height: 1.2; }
+.surprise__text b { color: var(--text); }
+.surprise__meta { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+.surprise--burn { border-color: rgba(255, 140, 60, 0.55); background: rgba(255, 140, 60, 0.08); }
+.surprise--insight { border-color: rgba(34, 228, 255, 0.5); background: rgba(34, 228, 255, 0.08); }
+.surprise--wager { border-color: rgba(246, 196, 83, 0.55); background: rgba(246, 196, 83, 0.08); }
+
+/* Mechanic 1: the text burns away from the top */
+.slide__text--burn {
+  --burn: -14;
+  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--burn) * 1%), #000 calc(var(--burn) * 1% + 14%));
+  mask-image: linear-gradient(to bottom, transparent calc(var(--burn) * 1%), #000 calc(var(--burn) * 1% + 14%));
+}
+.slide__text.is-hidden { display: none; }
+
+/* Mechanic 2: keywords that glow for a moment */
+.kw { margin: 0; padding: 0 2px; font: inherit; color: inherit; background: none; border: 0; border-radius: 5px; cursor: default; }
+.kw--glow {
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(34, 228, 255, 0.28);
+  box-shadow: 0 0 16px rgba(34, 228, 255, 0.95);
+  animation: kw-pulse 0.9s ease-in-out infinite;
+}
+.kw--caught { color: var(--ok-text); background: rgba(57, 255, 136, 0.16); }
+@keyframes kw-pulse { 50% { box-shadow: 0 0 6px rgba(34, 228, 255, 0.5); } }
+
+/* Mechanic 3: the bet */
+.wager { margin-bottom: 14px; padding: 16px; border-radius: 16px; border: 1.5px dashed rgba(246, 196, 83, 0.7); background: rgba(246, 196, 83, 0.08); }
+.wager__q { margin: 0 0 6px; font-size: 1.15rem; font-weight: 800; }
+.wager__rules { margin: 0 0 14px; font-size: 0.9rem; line-height: 1.5; color: var(--text-2); }
+.wager__btns { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+.wager__btns .btn { min-height: 48px; padding: 10px; font-size: 0.95rem; animation: none; }
+
+/* a button with the hidden attribute must really disappear (the .btn rule sets display:flex) */
+.btn[hidden] { display: none; }
