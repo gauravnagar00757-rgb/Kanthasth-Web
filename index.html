@@ -216,6 +216,16 @@
     <span class="toast__text" id="toast-text"></span>
   </div>
 
+  <!-- Visual Concept / Simulation: a video or an interactive simulation in a modal -->
+  <div class="viewer hidden" id="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title">
+    <div class="viewer__bar">
+      <h2 class="viewer__title" id="viewer-title">Visual Concept</h2>
+      <a class="viewer__open" id="viewer-open" href="#" target="_blank" rel="noopener noreferrer">Open in a new tab</a>
+      <button class="viewer__close" id="viewer-close" type="button" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="viewer__stage" id="viewer-stage"></div>
+  </div>
+
   <!-- Chill Mode: the reward for finishing today's mission -->
   <div class="chill hidden" id="chill" role="dialog" aria-modal="true" aria-labelledby="chill-title">
     <div class="chill__card">

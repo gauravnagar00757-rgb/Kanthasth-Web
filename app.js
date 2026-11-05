@@ -645,7 +645,8 @@ function renderSlide(q) {
   banner.append(icon, text, meta);
   wrap.appendChild(banner);
 
-  const { body, buttons } = slideBody(q, mech === 'insight' ? keywords : []);
+  const hunted = mech === 'insight' ? shuffle(keywords).slice(0, 2 + Math.floor(Math.random() * 2)) : []; // 2 or 3 words
+  const { body, buttons } = slideBody(q, hunted);
   wrap.appendChild(body);
 
   const next = document.createElement('button');
@@ -1094,10 +1095,9 @@ function collectMedia(q) {
   return items;
 }
 
-function buildMediaPanel(item) {
+// The embed itself: an iframe (YouTube, PhET and other simulations) or a plain video file
+function buildEmbed(item) {
   const info = mediaEmbed(item.url);
-  const panel = document.createElement('div');
-  panel.className = 'media__panel';
   const frame = document.createElement('div');
   frame.className = 'media__frame';
 
@@ -1125,22 +1125,44 @@ function buildMediaPanel(item) {
     f.referrerPolicy = 'strict-origin-when-cross-origin';
     frame.appendChild(f);
   }
-  panel.appendChild(frame);
-
-  if (info) {
-    const open = document.createElement('a');
-    open.className = 'media__open';
-    open.href = info.url;
-    open.target = '_blank';
-    open.rel = 'noopener noreferrer';
-    open.textContent = 'Open in a new tab';
-    panel.appendChild(open);
-  }
-  return panel;
+  return { frame, url: info ? info.url : '' };
 }
 
-// Nothing loads until the player taps: no data used, no autoplay, and stepping on destroys the embed
+/* ---- the iframe modal ---- */
+const viewerEl = document.getElementById('viewer');
+const viewerStage = document.getElementById('viewer-stage');
+const viewerLink = document.getElementById('viewer-open');
+let viewerOpener = null;
+const viewerIsOpen = () => !viewerEl.classList.contains('hidden');
+
+function openViewer(item, opener) {
+  const { frame, url } = buildEmbed(item);
+  viewerStage.replaceChildren(frame);
+  document.getElementById('viewer-title').textContent = item.kind === 'sim' ? 'Simulation' : 'Visual Concept';
+  viewerLink.hidden = !url;
+  if (url) viewerLink.href = url;
+  viewerOpener = opener || null;
+  viewerEl.classList.remove('hidden');
+  document.getElementById('viewer-close').focus();
+}
+
+function closeViewer() {
+  if (!viewerIsOpen()) return;
+  viewerStage.replaceChildren(); // removing the frame also stops the video or the simulation
+  viewerEl.classList.add('hidden');
+  if (viewerOpener && document.contains(viewerOpener)) viewerOpener.focus();
+  viewerOpener = null;
+}
+
+document.getElementById('viewer-close').addEventListener('click', closeViewer);
+// Esc closes the modal first; the capture phase keeps that same Esc from also leaving the arena
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && viewerIsOpen()) { e.stopImmediatePropagation(); closeViewer(); }
+}, true);
+
+// The button(s) above the question; nothing loads until one is tapped
 function renderMedia(items) {
+  closeViewer();
   const old = document.getElementById('arena-media');
   if (old) old.remove();
   if (!items.length) return;
@@ -1150,9 +1172,6 @@ function renderMedia(items) {
   wrap.id = 'arena-media';
   const row = document.createElement('div');
   row.className = 'media__row';
-  const holder = document.createElement('div');
-  let openKey = null;
-
   items.forEach(item => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -1160,19 +1179,10 @@ function renderMedia(items) {
     const same = items.filter(x => x.kind === item.kind);
     const label = item.kind === 'sim' ? 'Simulation' : 'Visual Concept';
     b.textContent = items.length === 1 ? 'Visual Concept / Simulation' : (same.length > 1 ? label + ' ' + (same.indexOf(item) + 1) : label);
-    b.setAttribute('aria-expanded', 'false');
-    b.addEventListener('click', () => {
-      const key = item.kind + item.url;
-      row.querySelectorAll('.media__btn').forEach(x => x.setAttribute('aria-expanded', 'false'));
-      holder.replaceChildren(); // closing or switching destroys the old embed, which also stops its sound
-      if (openKey === key) { openKey = null; return; }
-      openKey = key;
-      b.setAttribute('aria-expanded', 'true');
-      holder.appendChild(buildMediaPanel(item));
-    });
+    b.addEventListener('click', () => openViewer(item, b));
     row.appendChild(b);
   });
-  wrap.append(row, holder);
+  wrap.appendChild(row);
   arenaQuestion.before(wrap);
 }
 
